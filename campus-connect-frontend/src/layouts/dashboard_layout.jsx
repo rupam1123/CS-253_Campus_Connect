@@ -11,7 +11,8 @@ import {
 function DashboardLayout({ children }) {
  const location = useLocation();
  const navigate = useNavigate();
- const role = localStorage.getItem("role") || "Student";
+ const role = localStorage.getItem("role") || "professor";
+ //console.log("Current role in DashboardLayout:", role);
 
  const pageTitles = {
   "/student-dashboard": "Overview",
@@ -48,12 +49,12 @@ function DashboardLayout({ children }) {
   },
   { name: "Forum", path: "/forum", icon: <MessageSquare size={20} /> },
  ];
-
- const menu = role === "Professor" ? professorMenu : studentMenu;
-
+ //console.log("hiiii", role);
+ const menu = role === "student" ? studentMenu : professorMenu;
+ //console.log("Menu items based on role:", menu);
  const handleLogout = () => {
   localStorage.clear();
-  navigate("/login");
+  navigate("/");
  };
 
  return (

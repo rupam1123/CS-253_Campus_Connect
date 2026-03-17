@@ -1,62 +1,5 @@
-// import { Link } from "react-router-dom";
-// localStorage.setItem("role", "Professor"); // Set role for testing
-// function Login() {
-//  return (
-//   <div style={container}>
-//    <div style={card}>
-//     <h2>Campus Connect</h2>
-//     <p>Login to your account</p>
-
-//     <input type="email" placeholder="Email" style={input} />
-//     <input type="password" placeholder="Password" style={input} />
-
-//     <button style={button}>Login</button>
-
-//     <p style={{ marginTop: "10px" }}>
-//      Don't have an account? <Link to="/signup">Signup</Link>
-//     </p>
-//    </div>
-//   </div>
-//  );
-// }
-
-// const container = {
-//  height: "100vh",
-//  display: "flex",
-//  justifyContent: "center",
-//  alignItems: "center",
-//  background: "#f1f5f9",
-// };
-
-// const card = {
-//  background: "white",
-//  padding: "40px",
-//  borderRadius: "10px",
-//  width: "300px",
-//  textAlign: "center",
-//  boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-// };
-
-// const input = {
-//  width: "100%",
-//  padding: "10px",
-//  margin: "10px 0",
-//  borderRadius: "5px",
-//  border: "1px solid #ccc",
-// };
-
-// const button = {
-//  width: "100%",
-//  padding: "10px",
-//  background: "#2563eb",
-//  color: "white",
-//  border: "none",
-//  borderRadius: "5px",
-//  cursor: "pointer",
-// };
-
-// export default Login;
-import { useState } from "react";
+import axios from "axios";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
  GraduationCap,
@@ -65,26 +8,149 @@ import {
  ArrowRight,
  User,
  BookOpen,
+ X,
+ KeyRound,
 } from "lucide-react";
-localStorage.setItem("role", "Professor"); // Set role for testing
+import toast, { Toaster } from "react-hot-toast";
+
 function Login() {
  const navigate = useNavigate();
- const [role, setRole] = useState("Student");
+
+ // ======================
+ // LOGIN STATES
+ // ======================
+ const [role, setRole] = useState("student");
  const [email, setEmail] = useState("");
  const [password, setPassword] = useState("");
-
- // NEW STATES FOR OUR COOL PASSWORD TRICKS
  const [showPassword, setShowPassword] = useState(false);
 
- const handleLogin = (e) => {
-  e.preventDefault();
-  localStorage.setItem("role", "student"); // Mock authentication by saving role to localStorage
-  navigate(
-   role === "Professor" ? "/professor-dashboard" : "/student-dashboard",
-  );
+ // ======================
+ // FORGOT PASSWORD STATES
+ // ======================
+ const [showForgotModal, setShowForgotModal] = useState(false);
+ const [forgotStep, setForgotStep] = useState(1); // 1 = Email, 2 = OTP & New Password
+ const [resetEmail, setResetEmail] = useState("");
+ const [resetOtp, setResetOtp] = useState(new Array(6).fill(""));
+ const [newPassword, setNewPassword] = useState("");
+ const [resetTimer, setResetTimer] = useState(120);
+
+ // ======================
+ // OTP TIMER EFFECT
+ // ======================
+ useEffect(() => {
+  let interval;
+  if (showForgotModal && forgotStep === 2 && resetTimer > 0) {
+   interval = setInterval(() => setResetTimer((prev) => prev - 1), 1000);
+  } else if (resetTimer === 0) {
+   clearInterval(interval);
+  }
+  return () => clearInterval(interval);
+ }, [showForgotModal, forgotStep, resetTimer]);
+
+ const handleForgotOtpChange = (element, index) => {
+  if (isNaN(element.value)) return false;
+  setResetOtp([
+   ...resetOtp.map((d, idx) => (idx === index ? element.value : d)),
+  ]);
+  if (element.nextSibling && element.value !== "") {
+   element.nextSibling.focus();
+  }
  };
 
- // Quick function to calculate password strength (0 to 3)
+ const formatResetTime = () => {
+  const m = Math.floor(resetTimer / 60);
+  const s = resetTimer % 60;
+  return `${m}:${s < 10 ? "0" : ""}${s}`;
+ };
+
+ // ======================
+ // HANDLERS
+ // ======================
+ const handleLogin = async (e) => {
+  e.preventDefault();
+
+  if (!email || !password) {
+   toast.error("Please enter email and password");
+   return;
+  }
+
+  const toastId = toast.loading("Logging in...");
+
+  try {
+   const res = await axios.post("http://localhost:5001/api/auth/login", {
+    email,
+    password,
+   });
+
+   localStorage.setItem("token", res.data.token);
+   localStorage.setItem("user", JSON.stringify(res.data.user));
+   //console.log("Logged in user data 11111111:", res.data.user.role);
+   toast.success("Login successful! Redirecting...", { id: toastId });
+   //save role in local storage
+   localStorage.setItem("role", res.data.user.role);
+
+   if (res.data.user.role === "student") {
+    navigate("/student-dashboard");
+   } else {
+    navigate("/professor-dashboard");
+   }
+  } catch (err) {
+   toast.error(err.response?.data?.message || "Login failed", { id: toastId });
+  }
+ };
+
+ const handleSendResetOtp = async (e) => {
+  e.preventDefault();
+  if (!resetEmail) return toast.error("Please enter your email");
+
+  const toastId = toast.loading("Sending OTP...");
+  try {
+   await axios.post("http://localhost:5001/api/auth/send-reset-otp", {
+    email: resetEmail,
+   });
+   toast.success("OTP sent to your email!", { id: toastId });
+   setForgotStep(2);
+   setResetTimer(120);
+  } catch (err) {
+   toast.error(err.response?.data?.message || "Error sending OTP", {
+    id: toastId,
+   });
+  }
+ };
+
+ const handleResetPassword = async (e) => {
+  e.preventDefault();
+  const enteredOtp = resetOtp.join("");
+  if (enteredOtp.length !== 6)
+   return toast.error("Please enter the full 6-digit OTP");
+  if (newPassword.length < 6)
+   return toast.error("Password must be at least 6 characters");
+
+  const toastId = toast.loading("Resetting password...");
+  try {
+   await axios.post("http://localhost:5001/api/auth/reset-password", {
+    email: resetEmail,
+    otp: enteredOtp,
+    newPassword: newPassword,
+   });
+
+   toast.success("Password reset successfully! You can now log in.", {
+    id: toastId,
+   });
+
+   // Cleanup & Close Modal
+   setShowForgotModal(false);
+   setForgotStep(1);
+   setResetEmail("");
+   setResetOtp(new Array(6).fill(""));
+   setNewPassword("");
+  } catch (err) {
+   toast.error(err.response?.data?.message || "Failed to reset password", {
+    id: toastId,
+   });
+  }
+ };
+
  const calculateStrength = (pass) => {
   let score = 0;
   if (pass.length > 5) score += 1;
@@ -96,7 +162,33 @@ function Login() {
  const strengthScore = calculateStrength(password);
 
  return (
-  <div className="min-h-screen flex bg-white font-sans">
+  <div className="min-h-screen flex bg-white font-sans relative">
+   {/* --- FANCY GLASSMORPHISM TOAST ALERTS --- */}
+   <Toaster
+    position="top-right"
+    reverseOrder={false}
+    toastOptions={{
+     style: {
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      color: "#fff",
+      boxShadow: "0 8px 32px rgba(0, 0, 0, 0.25)",
+      borderRadius: "16px",
+      border: "1px solid rgba(255, 255, 255, 0.2)",
+      fontWeight: "bold",
+      padding: "16px 24px",
+     },
+     success: {
+      style: { background: "rgba(16, 185, 129, 0.85)" },
+      iconTheme: { primary: "#fff", secondary: "#10b981" },
+     },
+     error: {
+      style: { background: "rgba(239, 68, 68, 0.85)" },
+      iconTheme: { primary: "#fff", secondary: "#ef4444" },
+     },
+    }}
+   />
+
    {/* LEFT COLUMN - BRANDING */}
    <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
     <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
@@ -167,20 +259,28 @@ function Login() {
       <button
        type="button"
        onClick={() => setRole("Student")}
-       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${role === "Student" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${
+        role === "Student"
+         ? "bg-white text-indigo-600 shadow-sm"
+         : "text-slate-500 hover:text-slate-700"
+       }`}
       >
        <User size={18} /> Student
       </button>
       <button
        type="button"
        onClick={() => setRole("Professor")}
-       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${role === "Professor" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${
+        role === "Professor"
+         ? "bg-white text-indigo-600 shadow-sm"
+         : "text-slate-500 hover:text-slate-700"
+       }`}
       >
        <BookOpen size={18} /> Professor
       </button>
      </div>
 
-     {/* FORM */}
+     {/* MAIN LOGIN FORM */}
      <form onSubmit={handleLogin} className="space-y-6">
       <div>
        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
@@ -195,7 +295,7 @@ function Login() {
          required
          value={email}
          onChange={(e) => setEmail(e.target.value)}
-         placeholder="name@university.edu"
+         placeholder="username@iitk.ac.in"
          className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
         />
        </div>
@@ -206,12 +306,17 @@ function Login() {
         <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
          Password
         </label>
-        <a
-         href="#"
-         className="text-sm font-bold text-indigo-600 hover:text-indigo-500"
+        <button
+         type="button"
+         onClick={() => {
+          setShowForgotModal(true);
+          setForgotStep(1);
+          setResetEmail(email); // Autofill email if they typed it
+         }}
+         className="text-sm font-bold text-indigo-600 hover:text-indigo-500 focus:outline-none"
         >
          Forgot password?
-        </a>
+        </button>
        </div>
 
        <div className="relative group overflow-hidden rounded-xl">
@@ -224,11 +329,10 @@ function Login() {
          required
          value={password}
          onChange={(e) => setPassword(e.target.value)}
-         placeholder="••••••••"
+         placeholder="Hide it from your roommate !!"
          className="w-full pl-11 pr-12 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700 pb-4"
         />
 
-        {/* THE MONKEY TOGGLE */}
         <button
          type="button"
          onClick={() => setShowPassword(!showPassword)}
@@ -238,7 +342,7 @@ function Login() {
          {showPassword ? "🐵" : "🙈"}
         </button>
 
-        {/* PASSWORD STRENGTH BAR (Only shows when typing) */}
+        {/* STRENGTH BAR */}
         {password.length > 0 && (
          <div className="absolute bottom-0 left-0 h-1 bg-slate-100 w-full rounded-b-xl flex">
           <div
@@ -277,6 +381,136 @@ function Login() {
      </p>
     </div>
    </div>
+
+   {/* ========================================= */}
+   {/* FORGOT PASSWORD MODAL */}
+   {/* ========================================= */}
+   {showForgotModal && (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+     <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+      <button
+       onClick={() => setShowForgotModal(false)}
+       className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 p-2 rounded-full transition-colors"
+      >
+       <X size={20} />
+      </button>
+
+      {forgotStep === 1 ? (
+       // STEP 1: ENTER EMAIL
+       <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="text-center mb-8">
+         <div className="mx-auto w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
+          <KeyRound size={32} />
+         </div>
+         <h3 className="text-2xl font-black text-slate-900">Reset Password</h3>
+         <p className="text-slate-500 font-medium mt-2">
+          Enter your email and we'll send you a verification code.
+         </p>
+        </div>
+
+        <form onSubmit={handleSendResetOtp}>
+         <div className="mb-6">
+          <div className="relative">
+           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+            <Mail size={18} />
+           </div>
+           <input
+            type="email"
+            required
+            value={resetEmail}
+            onChange={(e) => setResetEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
+           />
+          </div>
+         </div>
+         <button
+          type="submit"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200"
+         >
+          Send Reset Link
+         </button>
+        </form>
+       </div>
+      ) : (
+       // STEP 2: ENTER OTP & NEW PASSWORD
+       <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+        <div className="text-center mb-8">
+         <div className="mx-auto w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
+          <Mail size={32} />
+         </div>
+         <h3 className="text-2xl font-black text-slate-900">
+          Check your email
+         </h3>
+         <p className="text-slate-500 font-medium mt-2">
+          Enter the 6-digit code sent to <br />
+          <span className="text-slate-900 font-bold">{resetEmail}</span>
+         </p>
+        </div>
+
+        <form onSubmit={handleResetPassword}>
+         {/* OTP INPUTS */}
+         <div className="flex justify-center gap-2 mb-6">
+          {resetOtp.map((data, index) => (
+           <input
+            key={index}
+            type="text"
+            maxLength="1"
+            value={data}
+            onChange={(e) => handleForgotOtpChange(e.target, index)}
+            onFocus={(e) => e.target.select()}
+            className="w-12 h-14 text-center text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+           />
+          ))}
+         </div>
+
+         {/* NEW PASSWORD INPUT */}
+         <div className="mb-8">
+          <div className="relative group overflow-hidden rounded-xl">
+           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+            <Lock size={18} />
+           </div>
+           <input
+            type="password"
+            required
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="Enter new password"
+            className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
+           />
+          </div>
+         </div>
+
+         <button
+          type="submit"
+          disabled={resetOtp.join("").length !== 6 || newPassword.length < 6}
+          className="w-full bg-slate-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold transition-all shadow-lg hover:bg-slate-800"
+         >
+          Set New Password
+         </button>
+        </form>
+
+        <div className="mt-6 text-center">
+         <p className="text-sm font-bold text-slate-500 mb-2">
+          Time remaining:{" "}
+          <span className="text-indigo-600 font-black">
+           {formatResetTime()}
+          </span>
+         </p>
+         <button
+          type="button"
+          onClick={handleSendResetOtp}
+          disabled={resetTimer > 0}
+          className={`text-sm font-bold transition-colors ${resetTimer > 0 ? "text-slate-400 cursor-not-allowed" : "text-indigo-600 hover:text-indigo-800 underline"}`}
+         >
+          Didn't receive code? Resend
+         </button>
+        </div>
+       </div>
+      )}
+     </div>
+    </div>
+   )}
   </div>
  );
 }
