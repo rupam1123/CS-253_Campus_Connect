@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
 import DashboardLayout from "../layouts/dashboard_layout";
 import {
  Search,
@@ -9,6 +10,7 @@ import {
  X,
  Briefcase,
  CheckCircle,
+ AlertTriangle,
 } from "lucide-react";
 
 function Projects() {
@@ -16,109 +18,152 @@ function Projects() {
  const [searchQuery, setSearchQuery] = useState("");
 
  // 1. NEW STATE FOR IN-APP NOTIFICATION
- const [toastMessage, setToastMessage] = useState(null);
+ const [toast, setToast] = useState({
+  message: "",
+  type: "success", // success | error | warning
+  show: false,
+ });
 
  const [applicationForm, setApplicationForm] = useState({
   rollNo: "",
   name: "",
   branch: "",
   cpi: "",
+  emailid: "",
   resume: "",
   sop: "",
  });
 
- const [projects] = useState([
-  {
-   id: 1,
-   title: "AI Research Assistant",
-   professor: "Dr. Sharma",
-   dept: "CSE",
-   cpi: "8.5",
-   duration: "6 Months",
-   skills: "Python, PyTorch, ML",
-   description:
-    "Work on machine learning models for research automation and predictive analysis.",
-  },
-  {
-   id: 2,
-   title: "Blockchain Security",
-   professor: "Dr. Gupta",
-   dept: "IT",
-   cpi: "8.0",
-   duration: "4 Months",
-   skills: "Solidity, Cryptography",
-   description:
-    "Analyze blockchain vulnerabilities and write secure smart contracts.",
-  },
-  {
-   id: 3,
-   title: "Campus Navigation App",
-   professor: "Dr. Mehta",
-   dept: "ECE",
-   cpi: "7.5",
-   duration: "3 Months",
-   skills: "React Native, Firebase",
-   description:
-    "Develop a mobile app for indoor and outdoor campus navigation.",
-  },
- ]);
+ const [projects, setProjects] = useState([]);
+ const [loading, setLoading] = useState(true);
+
+ useEffect(() => {
+  const fetchProjects = async () => {
+   try {
+    const res = await axios.get(
+     "http://localhost:5001/api/projects/get-all-project",
+    );
+
+    setProjects(res.data); // or res.data.projects (depends on backend)
+   } catch (err) {
+    console.error("Error fetching projects:", err);
+   } finally {
+    setLoading(false);
+   }
+  };
+
+  fetchProjects();
+ }, []);
 
  const filteredProjects = projects.filter(
   (p) =>
    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-   p.skills.toLowerCase().includes(searchQuery.toLowerCase()),
+   p.skills.toLowerCase().includes(searchQuery.toLowerCase()) ||
+   p.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+   p.professor_id.toLowerCase().includes(searchQuery.toLowerCase()),
  );
 
  const handleInputChange = (e) => {
   setApplicationForm({ ...applicationForm, [e.target.name]: e.target.value });
  };
 
- const handleApply = (e) => {
+ const handleApply = async (e) => {
   e.preventDefault();
-
-  // 2. TRIGGER THE TOAST INSTEAD OF THE BROWSER ALERT
-  setToastMessage(
-   `Application sent to ${selectedProject.professor} successfully!`,
-  );
-
-  // 3. AUTO-HIDE THE TOAST AFTER 3 SECONDS
-  setTimeout(() => {
-   setToastMessage(null);
-  }, 3000);
-
+  //console.log(selectedProject);
+  const user = JSON.parse(localStorage.getItem("user"));
+  // const userid = user.id;
   setSelectedProject(null);
-  setApplicationForm({
-   rollNo: "",
-   name: "",
-   branch: "",
-   cpi: "",
-   resume: "",
-   sop: "",
-  });
+  try {
+   const res = await axios.post(
+    "http://localhost:5001/api/applications/apply",
+    {
+     project_id: selectedProject.id,
+     user_id: user.id,
+     full_name: applicationForm.name,
+     roll_no: applicationForm.rollNo,
+     branch: applicationForm.branch,
+     cpi: applicationForm.cpi,
+     email_id: applicationForm.emailid,
+     resume: applicationForm.resume,
+     sop: applicationForm.sop,
+    },
+   );
+
+   // success toast
+   setToast({
+    message: `Application sent to ${selectedProject.professor_id} successfully!`,
+    type: "success",
+    show: true,
+   });
+
+   setTimeout(() => {
+    setToast((prev) => ({ ...prev, show: false }));
+   }, 3000);
+
+   // reset form
+   setApplicationForm({
+    rollNo: "",
+    name: "",
+    branch: "",
+    cpi: "",
+    resume: "",
+    emailid: "",
+    sop: "",
+   });
+  } catch (err) {
+   console.error(err);
+   setToast({
+    message: err.response?.data?.message || "Error submitting application",
+    type:
+     err.response?.data?.message === "You have already applied to this project"
+      ? "warning"
+      : "error",
+    show: true,
+   });
+
+   setTimeout(() => {
+    setToast({ ...toast, show: false });
+   }, 3000);
+  }
  };
+
+ //console.log("Projects loaded:", projects);
 
  return (
   <DashboardLayout>
    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
     {/* TOAST NOTIFICATION UI */}
-    {toastMessage && (
-     <div className="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-[100] animate-in slide-in-from-bottom-8 slide-in-from-right-8 duration-300">
-      <CheckCircle size={24} />
+    {toast.show && (
+     <div
+      className={`fixed bottom-8 right-8 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-[100] animate-in slide-in-from-bottom-8 slide-in-from-right-8 duration-300 ${
+       toast.type === "success"
+        ? "bg-green-600"
+        : toast.type === "warning"
+          ? "bg-yellow-500"
+          : "bg-red-500"
+      }`}
+     >
+      {toast.type === "success" && <CheckCircle size={24} />}
+      {toast.type === "warning" && <AlertTriangle size={24} />}
+      {toast.type === "error" && <span className="text-2xl">❌</span>}
       <div>
-       <p className="text-sm font-black uppercase tracking-widest text-green-200 mb-0.5">
-        Success
+       <p className="text-sm font-black uppercase tracking-widest mb-0.5">
+        {toast.type === "success"
+         ? "Success"
+         : toast.type === "warning"
+           ? "Warning"
+           : "Error"}
        </p>
-       <p className="font-bold">{toastMessage}</p>
+       <p className="font-bold">{toast.message}</p>
       </div>
       <button
-       onClick={() => setToastMessage(null)}
+       onClick={() => setToast((prev) => ({ ...prev, show: false }))}
        className="ml-4 text-green-200 hover:text-white"
       >
        <X size={18} />
       </button>
      </div>
     )}
-
     {/* HEADER & SEARCH BAR */}
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
      <div>
@@ -136,14 +181,13 @@ function Projects() {
       </div>
       <input
        type="text"
-       placeholder="Search by title or skill..."
+       placeholder="Search by branch, prof, title or skill..."
        value={searchQuery}
        onChange={(e) => setSearchQuery(e.target.value)}
        className="w-full pl-11 pr-4 py-3 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700 shadow-sm text-sm"
       />
      </div>
     </div>
-
     {/* PROJECT GRID */}
     {filteredProjects.length > 0 ? (
      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -154,7 +198,7 @@ function Projects() {
        >
         <div className="flex justify-between items-start mb-4">
          <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100">
-          {project.dept}
+          {project.department}
          </span>
         </div>
 
@@ -168,21 +212,27 @@ function Projects() {
         <div className="space-y-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
           <User size={16} className="text-indigo-500" />
-          <span>{project.professor}</span>
+          <span>
+           Professor: <span className="font-bold">{project.professor_id}</span>
+          </span>
          </div>
          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
           <Award size={16} className="text-indigo-500" />
           <span>
-           Min CPI: <span className="font-bold">{project.cpi}</span>
+           Min CPI: <span className="font-bold">{project.min_cpi}</span>
           </span>
          </div>
          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
           <Clock size={16} className="text-indigo-500" />
-          <span>{project.duration}</span>
+          <span>
+           Duration: <span className="font-bold">{project.duration}</span>
+          </span>
          </div>
          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
           <Code2 size={16} className="text-indigo-500 min-w-max" />
-          <span className="truncate">{project.skills}</span>
+          <span>
+           Required Skills: <span className="font-bold">{project.skills}</span>
+          </span>
          </div>
         </div>
 
@@ -202,7 +252,6 @@ function Projects() {
       <p className="text-slate-500">Try adjusting your search terms.</p>
      </div>
     )}
-
     {/* APPLICATION MODAL */}
     {selectedProject && (
      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -291,7 +340,20 @@ function Projects() {
           />
          </div>
         </div>
-
+        <div>
+         <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">
+          Email ID <span className="text-red-500">*</span>
+         </label>
+         <input
+          type="email"
+          required
+          name="emailid"
+          value={applicationForm.emailid}
+          onChange={handleInputChange}
+          placeholder="e.g. username@iitk.ac.in"
+          className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors text-sm font-bold text-slate-700"
+         />
+        </div>
         <div>
          <label className="block text-[11px] font-black text-slate-500 mb-2 uppercase tracking-widest">
           Resume Link <span className="text-red-500">*</span>

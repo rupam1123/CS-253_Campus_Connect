@@ -7,12 +7,14 @@ import {
  LogOut,
  GraduationCap,
 } from "lucide-react";
-
 function DashboardLayout({ children }) {
  const location = useLocation();
  const navigate = useNavigate();
  const role = localStorage.getItem("role") || "professor";
  //console.log("Current role in DashboardLayout:", role);
+ const user = JSON.parse(localStorage.getItem("user"));
+ const userName = user.email;
+ const username = userName.slice(0, -11);
 
  const pageTitles = {
   "/student-dashboard": "Overview",
@@ -121,7 +123,7 @@ function DashboardLayout({ children }) {
 
      <div className="flex items-center gap-6">
       <div className="flex flex-col items-end">
-       <span className="text-sm font-bold text-slate-900">Dr. Smith</span>
+       <span className="text-sm font-bold text-slate-900">{username}</span>
        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full uppercase border border-indigo-100">
         {role}
        </span>

@@ -1,4 +1,6 @@
-import { useState } from "react";
+//import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import DashboardLayout from "../layouts/dashboard_layout";
 import {
  Search,
@@ -23,111 +25,221 @@ function Forum() {
   content: "",
   tag: "General",
  });
+ // --- COMMENT STATE ---
+ const [expandedPostId, setExpandedPostId] = useState(null); // Tracks which post's comments are open
+ const [comments, setComments] = useState([]); // Holds the fetched comments
+ const [newCommentText, setNewCommentText] = useState(""); // Holds the text being typed
 
  // Initial Mock Data with a 'userVote' property to track if the current user has voted
- const [posts, setPosts] = useState([
-  {
-   id: 1,
-   author: "Arjun Mehta",
-   title: "Best resources for learning PyTorch?",
-   content:
-    "Hey everyone! I'm applying for Dr. Sharma's AI research project and want to brush up on PyTorch. Does anyone have good tutorial recommendations or roadmaps?",
-   upvotes: 24,
-   downvotes: 2,
-   userVote: null, // 'up', 'down', or null
-   comments: 5,
-   tag: "Academics",
-   time: "2 hours ago",
-  },
-  {
-   id: 2,
-   author: "Priya Das",
-   title: "Looking for a frontend developer for Hackathon!",
-   content:
-    "Our team is building a decentralized supply chain app for the upcoming Web3 hackathon. We need someone good with React and Tailwind. DM me if interested!",
-   upvotes: 15,
-   downvotes: 0,
-   userVote: "up", // Simulating the user already upvoted this
-   comments: 8,
-   tag: "Projects",
-   time: "5 hours ago",
-  },
-  {
-   id: 3,
-   author: "Rahul Verma",
-   title: "Did anyone understand the Red-Black tree lecture?",
-   content:
-    "I'm completely lost on the insertion cases we covered today in Data Structures. Would anyone be open to a quick study session in the library tomorrow?",
-   upvotes: 42,
-   downvotes: 5,
-   userVote: null,
-   comments: 12,
-   tag: "Study Group",
-   time: "1 day ago",
-  },
- ]);
+ const [posts, setPosts] = useState([]);
+ useEffect(() => {
+  const fetchPosts = async () => {
+   try {
+    // Replace with your actual backend URL port (e.g., http://localhost:5000/posts)
+    const response = await fetch("http://localhost:5001/api/forum/posts");
+    if (response.ok) {
+     const data = await response.json();
+     // 1. Grab the "memory" of votes from the browser
+     const savedVotes = JSON.parse(
+      localStorage.getItem("my_forum_votes") || "{}",
+     );
 
+     // 2. Loop through the backend data and re-apply the user's past votes
+     const postsWithMemory = data.map((post) => ({
+      ...post,
+      // If the post ID is in local storage, set userVote (which freezes the button!)
+      userVote: savedVotes[post.id || post._id] || null,
+     }));
+     setPosts(postsWithMemory);
+    }
+   } catch (error) {
+    console.error("Failed to fetch posts:", error);
+   }
+  };
+
+  fetchPosts();
+ }, []);
  // ADVANCED VOTING LOGIC (Ensures 1 vote per user, allows toggling/switching)
- const handleVote = (id, voteType) => {
+ const handleVote = async (id, voteType) => {
+  // 1. Find the post to check its current status
+  const postToVote = posts.find((p) => p.id === id || p._id === id);
+
+  // 2. THE FREEZE CHECK: If they already voted, do absolutely nothing.
+  if (postToVote && postToVote.userVote) {
+   return;
+  }
+
+  // 3. Calculate the new numbers (Adding 1 to whichever they picked)
+  let newUpvotes = postToVote.upvotes || 0;
+  let newDownvotes = postToVote.downvotes || 0;
+  voteType === "up" ? newUpvotes++ : newDownvotes++;
+
+  // 4. Update the UI instantly and lock in their 'userVote'
   setPosts(
    posts.map((post) => {
-    if (post.id === id) {
-     let newUpvotes = post.upvotes;
-     let newDownvotes = post.downvotes;
-     let newUserVote = post.userVote;
-
-     // If clicking the same vote again, remove the vote (Toggle off)
-     if (post.userVote === voteType) {
-      voteType === "up" ? newUpvotes-- : newDownvotes--;
-      newUserVote = null;
-     }
-     // Otherwise, apply the new vote
-     else {
-      // If they are switching votes, remove the old one first
-      if (post.userVote === "up") newUpvotes--;
-      if (post.userVote === "down") newDownvotes--;
-
-      // Add the new vote
-      voteType === "up" ? newUpvotes++ : newDownvotes++;
-      newUserVote = voteType;
-     }
-
+    if (post.id === id || post._id === id) {
      return {
       ...post,
       upvotes: newUpvotes,
       downvotes: newDownvotes,
-      userVote: newUserVote,
+      userVote: voteType,
      };
     }
     return post;
    }),
   );
+
+  // 5. TRIGGER THE POPUP
+  setToastMessage(`Successfully ${voteType}voted!`);
+  setTimeout(() => setToastMessage(null), 3000);
+  const currentSavedVotes = JSON.parse(
+   localStorage.getItem("my_forum_votes") || "{}",
+  );
+  currentSavedVotes[id] = voteType; // Example: { "1": "up", "2": "down" }
+  localStorage.setItem("my_forum_votes", JSON.stringify(currentSavedVotes));
+
+  // 6. Tell the Backend to save it
+  try {
+   const response = await fetch("http://localhost:5001/api/forum/vote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+     postId: id,
+     upvotes: newUpvotes,
+     downvotes: newDownvotes,
+    }),
+   });
+
+   if (!response.ok) {
+    console.error("Server rejected the vote");
+   }
+  } catch (error) {
+   console.error("Failed to save vote to server:", error);
+  }
+ };
+ const handleCreatePost = async (e) => {
+  e.preventDefault();
+
+  // 1. Give the user feedback if fields are empty
+  if (!newPost.title.trim() || !newPost.content.trim()) {
+   alert("Please fill out both the title and the details.");
+   return;
+  }
+
+  try {
+   const response = await fetch("http://localhost:5001/api/forum/create-post", {
+    method: "POST",
+    headers: {
+     "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+     title: newPost.title,
+     content: newPost.content,
+     tag: newPost.tag,
+     author: "You",
+    }),
+   });
+
+   if (response.ok) {
+    const savedPost = await response.json();
+
+    // 1. Let's look at exactly what the backend gave us
+    console.log("Data from backend:", savedPost);
+
+    // 2. Create a "safe" post object with defaults to prevent crashes
+    // If the backend didn't send a field, we provide a safe fallback
+    const safeNewPost = {
+     id: savedPost.id || savedPost._id || Date.now(), // Handles SQL, MongoDB, or missing IDs
+     title: savedPost.title || newPost.title || "",
+     content: savedPost.content || newPost.content || "",
+     tag: savedPost.tag || newPost.tag || "General",
+     author: savedPost.author || "You",
+     upvotes: savedPost.upvotes || 0,
+     downvotes: savedPost.downvotes || 0,
+     comments: savedPost.comments || 0,
+     time: savedPost.time || "Just now",
+     userVote: null,
+    };
+
+    // Add the SAFE post to the top of the list in the UI
+    setPosts([safeNewPost, ...posts]);
+
+    // Close modal and reset form
+    setShowNewPostModal(false);
+    setNewPost({ title: "", content: "", tag: "General" });
+
+    // Show success message
+    setToastMessage("Your post has been published to the forum!");
+    setTimeout(() => setToastMessage(null), 3000);
+   } else {
+    // 2. Alert if the server throws a 400 or 500 error
+    console.error("Server responded with:", response.status);
+    alert(`Server Error: Could not save the post. Status: ${response.status}`);
+   }
+  } catch (error) {
+   // 3. Alert if the network fails completely (like a CORS error)
+   console.error("Error creating post:", error);
+   alert(
+    "Network Error: Could not reach the server. Check your console for CORS or connection issues.",
+   );
+  }
  };
 
- const handleCreatePost = (e) => {
-  e.preventDefault();
-  if (!newPost.title.trim() || !newPost.content.trim()) return;
+ // --- FETCH COMMENTS ---
+ const handleToggleComments = async (postId) => {
+  // If they click the same post again, close the section
+  if (expandedPostId === postId) {
+   setExpandedPostId(null);
+   return;
+  }
 
-  const postToAdd = {
-   id: Date.now(),
-   author: "You", // In a real app, pull from Auth context
-   title: newPost.title,
-   content: newPost.content,
-   upvotes: 1, // Automatically upvote your own post
-   downvotes: 0,
-   userVote: "up",
-   comments: 0,
-   tag: newPost.tag,
-   time: "Just now",
-  };
+  setExpandedPostId(postId);
+  setComments([]); // Clear out old comments while loading
 
-  setPosts([postToAdd, ...posts]);
-  setShowNewPostModal(false);
-  setNewPost({ title: "", content: "", tag: "General" });
+  try {
+   const response = await fetch(
+    `http://localhost:5001/api/forum/comments/${postId}`,
+   );
+   if (response.ok) {
+    const data = await response.json();
+    // For now, let's only grab top-level comments (where parent_id is null)
+    const topLevelComments = data.filter((c) => c.parent_id === null);
+    setComments(topLevelComments);
+   }
+  } catch (error) {
+   console.error("Failed to fetch comments:", error);
+  }
+ };
 
-  // Trigger Toast Notification
-  setToastMessage("Your post has been published to the forum!");
-  setTimeout(() => setToastMessage(null), 3000);
+ // --- SUBMIT NEW COMMENT ---
+ const handleAddComment = async (postId) => {
+  if (!newCommentText.trim()) return;
+
+  try {
+   const response = await fetch("http://localhost:5001/api/forum/add-comment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+     post_id: postId,
+     parent_id: null, // Explicitly null for top-level comments
+     content: newCommentText,
+    }),
+   });
+
+   if (response.ok) {
+    setNewCommentText(""); // Clear the input box
+    setToastMessage("Comment added!");
+    setTimeout(() => setToastMessage(null), 3000);
+
+    // Re-fetch comments to show the new one instantly
+    handleToggleComments(postId);
+    setTimeout(() => handleToggleComments(postId), 50); // Quick hack to trigger the re-fetch
+   } else {
+    alert("Failed to save comment.");
+   }
+  } catch (error) {
+   console.error("Error saving comment:", error);
+  }
  };
 
  const filteredPosts = posts.filter(
@@ -202,24 +314,47 @@ function Forum() {
         className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:border-indigo-300 transition-all duration-300 flex gap-5"
        >
         {/* VOTING COLUMN */}
+        {/* VOTING COLUMN */}
         <div className="flex flex-col items-center gap-1 bg-slate-50 rounded-xl p-2 h-fit border border-slate-100 min-w-[50px]">
          <button
-          onClick={() => handleVote(post.id, "up")}
-          className={`transition-colors p-1 rounded-md ${post.userVote === "up" ? "text-green-600 bg-green-100" : "text-slate-400 hover:text-green-600 hover:bg-slate-200"}`}
+          onClick={() => handleVote(post.id || post._id, "up")}
+          disabled={!!post.userVote} // FREEZES THE BUTTON IF THEY VOTED
+          className={`transition-colors p-1 rounded-md ${
+           post.userVote === "up"
+            ? "text-green-600 bg-green-100 cursor-default" // Highlighted if they picked this
+            : post.userVote
+              ? "text-slate-300 opacity-50 cursor-not-allowed" // Grayed out if they voted down
+              : "text-slate-400 hover:text-green-600 hover:bg-slate-200" // Normal hover state
+          }`}
          >
           <ArrowBigUp
            size={24}
            className={post.userVote === "up" ? "fill-green-600" : ""}
           />
          </button>
+
          <span
-          className={`font-black text-sm ${post.userVote === "up" ? "text-green-600" : post.userVote === "down" ? "text-red-600" : "text-slate-700"}`}
+          className={`font-black text-sm ${
+           post.userVote === "up"
+            ? "text-green-600"
+            : post.userVote === "down"
+              ? "text-red-600"
+              : "text-slate-700"
+          }`}
          >
           {post.upvotes - post.downvotes}
          </span>
+
          <button
-          onClick={() => handleVote(post.id, "down")}
-          className={`transition-colors p-1 rounded-md ${post.userVote === "down" ? "text-red-600 bg-red-100" : "text-slate-400 hover:text-red-600 hover:bg-slate-200"}`}
+          onClick={() => handleVote(post.id || post._id, "down")}
+          disabled={!!post.userVote} // FREEZES THE BUTTON IF THEY VOTED
+          className={`transition-colors p-1 rounded-md ${
+           post.userVote === "down"
+            ? "text-red-600 bg-red-100 cursor-default" // Highlighted if they picked this
+            : post.userVote
+              ? "text-slate-300 opacity-50 cursor-not-allowed" // Grayed out if they voted up
+              : "text-slate-400 hover:text-red-600 hover:bg-slate-200" // Normal hover state
+          }`}
          >
           <ArrowBigDown
            size={24}
@@ -245,16 +380,65 @@ function Forum() {
 
          <div className="flex flex-wrap items-center gap-4 pt-2 mt-2 border-t border-slate-50 text-xs font-bold text-slate-400">
           <div className="flex items-center gap-1">
-           <UserCircle size={14} className="text-slate-500" /> {post.author}
+           <UserCircle size={14} className="text-slate-500" /> Anonymous User
           </div>
           <div className="flex items-center gap-1">
            <Clock size={14} className="text-slate-500" /> {post.time}
           </div>
-          <div className="flex items-center gap-1 hover:text-indigo-600 cursor-pointer transition-colors">
+          <div
+           onClick={() => handleToggleComments(post.id)}
+           className="flex items-center gap-1 hover:text-indigo-600 cursor-pointer transition-colors"
+          >
            <MessageSquare size={14} className="text-indigo-500" />{" "}
            {post.comments} Comments
           </div>
          </div>
+
+         {/* --- COMMENTS DROP-DOWN UI --- */}
+         {expandedPostId === post.id && (
+          <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+           {/* 1. Display Existing Comments */}
+           <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2">
+            {comments.length > 0 ? (
+             comments.map((comment) => (
+              <div
+               key={comment.id}
+               className="bg-slate-50 p-3 rounded-xl border border-slate-200"
+              >
+               <p className="text-slate-700 text-sm">{comment.content}</p>
+               <div className="flex justify-between items-center mt-2">
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                 {new Date(comment.created_at).toLocaleString()}
+                </span>
+                {/* We will add the "Reply" button here in the next step! */}
+               </div>
+              </div>
+             ))
+            ) : (
+             <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+              No comments yet. Be the first to share your thoughts!
+             </p>
+            )}
+           </div>
+
+           {/* 2. Add New Comment Input */}
+           <div className="flex gap-2">
+            <input
+             type="text"
+             placeholder="Write a comment..."
+             value={newCommentText}
+             onChange={(e) => setNewCommentText(e.target.value)}
+             className="flex-1 px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-400 transition-colors"
+            />
+            <button
+             onClick={() => handleAddComment(post.id)}
+             className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md transition-colors"
+            >
+             Post
+            </button>
+           </div>
+          </div>
+         )}
         </div>
        </div>
       ))

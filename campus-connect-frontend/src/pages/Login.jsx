@@ -83,8 +83,10 @@ function Login() {
    });
 
    localStorage.setItem("token", res.data.token);
+   //console.log("Login successful, received token:", res.data.token);
    localStorage.setItem("user", JSON.stringify(res.data.user));
-   //console.log("Logged in user data 11111111:", res.data.user.role);
+   const user = JSON.parse(localStorage.getItem("user"));
+   console.log("Stored user in localStorage:", user.id, user.email, user.role);
    toast.success("Login successful! Redirecting...", { id: toastId });
    //save role in local storage
    localStorage.setItem("role", res.data.user.role);
