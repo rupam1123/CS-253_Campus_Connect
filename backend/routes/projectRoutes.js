@@ -5,7 +5,9 @@ const projectController = require("../controllers/projectController");
 // Map routes to controller functions
 router.post("/create-project", projectController.createProject);
 router.get("/get-all-project", projectController.getAllProjects);
-router.get("/get-project/:id", projectController.getProjectById);
+//router.get("/get-project/:id", projectController.getProjectById);
+// Change :profId to :profName
+router.get("/professor/:profName", projectController.getProjectsByProfessor);
 router.put("/update-project/:id", projectController.updateProject);
 router.delete("/delete-project/:id", projectController.deleteProject);
 router.get(

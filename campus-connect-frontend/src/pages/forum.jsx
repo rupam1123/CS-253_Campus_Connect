@@ -311,7 +311,7 @@ function Forum() {
       filteredPosts.map((post) => (
        <div
         key={post.id}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 hover:border-indigo-300 transition-all duration-300 flex gap-5"
+        className="bg-white rounded-2xl shadow-sm border border-slate-400 p-5 hover:border-indigo-300 transition-all duration-300 flex gap-5"
        >
         {/* VOTING COLUMN */}
         {/* VOTING COLUMN */}
@@ -519,9 +519,13 @@ function Forum() {
           required
           value={newPost.content}
           onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-          placeholder="Add context, links, or specific questions here..."
+          maxLength="500"
+          placeholder="Add context, links, or specific questions here (Max 500 characters)..."
           className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors resize-none h-40 text-sm font-medium text-slate-700"
          />
+         <p className="text-right text-[10px] text-slate-400 mt-1">
+          Max 500 characters
+         </p>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-slate-100">

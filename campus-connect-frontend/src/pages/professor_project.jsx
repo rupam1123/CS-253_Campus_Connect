@@ -19,35 +19,43 @@ function ProfessorProject() {
 
  const [projects, setProjects] = useState([]);
  const [isLoading, setIsLoading] = useState(true);
+ const [projectToDelete, setProjectToDelete] = useState(null);
  useEffect(() => {
   const fetchProjects = async () => {
    try {
-    // 1. Call your Express backend
+    // 1. Get the logged-in user from local storage
+    const userString = localStorage.getItem("user");
+    if (!userString) {
+     throw new Error("No user logged in!");
+    }
+
+    // Parse the user object and grab the name
+    const user = JSON.parse(userString);
+    const profName = user.name;
+
+    // 2. Call the backend using the encoded professor's name
     const response = await fetch(
-     "http://localhost:5001/api/projects/get-all-project",
+     `http://localhost:5001/api/projects/professor/${encodeURIComponent(profName)}`,
     );
 
     if (!response.ok) {
      throw new Error("Failed to fetch from database");
     }
 
-    // 2. Convert the response to JSON
+    // 3. Parse and set the projects in state
     const data = await response.json();
-
-    // 3. Put the real database projects into our React state
-    // console.log("Fetching projects from backend...", data);
     setProjects(data);
    } catch (error) {
-    // console.error("Error loading projects:", error);
-    onApplicantAction("Failed to load projects from server.", "error");
+    console.error("Error loading projects:", error);
+    onApplicantAction("Failed to load your projects.", "error");
    } finally {
-    // Turn off the loading state when finished
+    // Turn off the loading state when finished, whether it succeeded or failed
     setIsLoading(false);
    }
   };
+
   fetchProjects();
  }, []); // The empty brackets [] mean this only runs ONCE when the page loads
-
  const [showWizard, setShowWizard] = useState(false);
 
  const [form, setForm] = useState({
@@ -106,14 +114,25 @@ function ProfessorProject() {
     throw new Error("Failed to save to database");
    }
 
-   const savedProject = await response.json();
+   // The server only sends back { message, projectId }
+   const serverResponse = await response.json();
 
+   // Manually build the project object for the UI so we don't need to refresh
    const newProjectForUI = {
-    ...savedProject,
-
-    applicants: savedProject.applicants || [],
+    id: serverResponse.projectId, // Use the new ID from the database
+    title: payload.title,
+    department: payload.department,
+    program: payload.program,
+    min_cpi: payload.min_cpi,
+    team_size: payload.team_size,
+    skills: payload.skills,
+    duration: payload.duration,
+    description: payload.description,
+    professor_id: payload.professor_id,
+    applicant_count: 0, // Brand new project, so nobody has applied yet!
    };
 
+   // Put the new project at the VERY TOP of the array
    setProjects([newProjectForUI, ...projects]);
    setShowWizard(false);
    onApplicantAction("Project saved to database successfully!", "success");
@@ -139,6 +158,36 @@ function ProfessorProject() {
   }
  };
 
+ // 1. This just opens the popup and remembers the ID
+ const deleteProject = (projectId) => {
+  setProjectToDelete(projectId);
+ };
+
+ // 2. This runs ONLY if they click "Yes, Delete" in the popup
+ const executeDelete = async () => {
+  if (!projectToDelete) return; // Failsafe
+
+  try {
+   const response = await fetch(
+    `http://localhost:5001/api/projects/delete-project/${projectToDelete}`,
+    {
+     method: "DELETE",
+    },
+   );
+
+   if (!response.ok) throw new Error("Failed to delete project");
+
+   // Remove from screen instantly
+   setProjects(projects.filter((p) => p.id !== projectToDelete));
+   onApplicantAction("Project deleted successfully!", "success");
+  } catch (error) {
+   console.error("Error deleting:", error);
+   onApplicantAction("Error deleting project.", "error");
+  } finally {
+   // Close the popup whether it succeeded or failed
+   setProjectToDelete(null);
+  }
+ };
  // Reusable Tailwind class for inputs
  const inputClass =
   "w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 outline-none transition-all focus:border-indigo-600 focus:bg-white";
@@ -180,6 +229,7 @@ function ProfessorProject() {
         key={p.id}
         project={p}
         onApplicantAction={onApplicantAction}
+        onDelete={() => deleteProject(p.id)}
        />
       ))
      )}
@@ -192,7 +242,7 @@ function ProfessorProject() {
        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
        onClick={() => setShowWizard(false)}
       ></div>
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
        <div className="p-8">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">
          Create New Project
@@ -286,17 +336,21 @@ function ProfessorProject() {
           </label>
           <textarea
            name="description"
-           rows="3"
-           placeholder="Description..."
+           rows="7"
+           maxLength="500"
+           placeholder="Description (Max 500 characters)..."
            onChange={handleChange}
            className={`${inputClass} resize-none`}
           />
+          <p className="text-right text-[10px] text-slate-400 mt-1">
+           Max 500 characters
+          </p>
          </div>
          <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-slate-100">
           <button
            type="button"
            onClick={() => setShowWizard(false)}
-           className="px-6 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
+           className="px-6 py-3 bg-gray-300 font-bold text-slate-700 hover:bg-slate-500 hover:text-slate-100 rounded-xl transition-colors"
           >
            Cancel
           </button>
@@ -314,7 +368,61 @@ function ProfessorProject() {
      </div>
     )}
    </div>
+   {/* --- NEW DELETE CONFIRMATION POPUP --- */}
+   {projectToDelete && (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+     {/* Dark background overlay */}
+     <div
+      className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+      onClick={() => setProjectToDelete(null)}
+     ></div>
 
+     {/* White Popup Box */}
+     <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 text-center animate-in fade-in zoom-in-95 duration-200">
+      {/* Red Warning Icon */}
+      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-red-100">
+       <svg
+        className="w-8 h-8 text-red-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth="2.5"
+       >
+        <path
+         strokeLinecap="round"
+         strokeLinejoin="round"
+         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+       </svg>
+      </div>
+
+      <h3 className="text-xl font-black text-slate-800 mb-2">
+       Delete Project?
+      </h3>
+      <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+       This action cannot be undone. All student applications tied to this
+       project will also be removed.
+      </p>
+
+      {/* Buttons */}
+      <div className="flex gap-3 w-full">
+       <button
+        onClick={() => setProjectToDelete(null)}
+        className="flex-1 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 font-bold rounded-xl transition-colors border border-slate-200"
+       >
+        Cancel
+       </button>
+       <button
+        onClick={executeDelete}
+        className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all active:scale-95"
+       >
+        Yes, Delete
+       </button>
+      </div>
+     </div>
+    </div>
+   )}
+   {/* --- END OF POPUP --- */}
    {/* TOAST NOTIFICATION */}
    <div
     className={`fixed top-6 right-6 z-50 z-50 transform transition-all duration-300 ${
@@ -337,7 +445,7 @@ function ProfessorProject() {
   </DashboardLayout>
  );
 }
-function ProjectCard({ project, onApplicantAction }) {
+function ProjectCard({ project, onApplicantAction, onDelete }) {
  const [isExpanded, setIsExpanded] = useState(false);
 
  // CRITICAL FIX: If the database doesn't send an applicants array, we default to an empty array [] so React doesn't crash!
@@ -345,14 +453,26 @@ function ProjectCard({ project, onApplicantAction }) {
  const [applicants, setApplicants] = useState([]);
  useEffect(() => {
   if (isExpanded) {
+   console.log(`Fetching applications for Project ID: ${project.id}`); // Debugging start
+
    axios
     .get(`http://localhost:5001/api/projects/applications/${project.id}`)
     .then((res) => {
-     const pendingOnly = res.data.filter((app) => app.status === "pending");
+     console.log("RAW Database Response:", res.data); // See exactly what came back
 
+     // Make the filter robust: handle nulls and case differences
+     const pendingOnly = res.data.filter((app) => {
+      // If status is null/undefined in DB, assume it's pending
+      const currentStatus = app.status ? app.status.toLowerCase() : "pending";
+      return currentStatus === "pending";
+     });
+
+     console.log("Filtered Pending Applications:", pendingOnly); // See what survived the filter
      setApplicants(pendingOnly);
     })
-    .catch((err) => console.error(err));
+    .catch((err) => {
+     console.error("Error fetching applications:", err);
+    });
   }
  }, [isExpanded, project.id]);
  const handleStatus = async (app, status) => {
@@ -374,6 +494,8 @@ function ProjectCard({ project, onApplicantAction }) {
     status: status,
     email: app.email_id,
     name: app.full_name,
+    projectTitle: project.title, // <-- Added Project Title
+    profName: project.professor_id, // <-- Added Professor Name
    });
   } catch (err) {
    console.error(err);
@@ -381,7 +503,7 @@ function ProjectCard({ project, onApplicantAction }) {
   }
  };
  return (
-  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+  <div className="bg-white rounded-2xl shadow-sm border border-slate-400 overflow-hidden transition-all duration-300">
    <div className="p-6 pb-4">
     <div className="flex justify-between items-start mb-4">
      <div>
@@ -391,18 +513,24 @@ function ProjectCard({ project, onApplicantAction }) {
       <h3 className="text-xl font-bold text-slate-800 mt-2">{project.title}</h3>
      </div>
      <div className="text-right">
-      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+      <p className="text-[15px] font-black text-slate-400 uppercase tracking-widest">
        Min. CPI
       </p>
-      <p className="text-xl font-black text-indigo-600">{project.min_cpi}+</p>
+      <p className="text-xl font-black text-indigo-600">{project.min_cpi}+ </p>
      </div>
+     <button
+      onClick={onDelete}
+      className="text-[12px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors border border-red-400"
+     >
+      Delete Project
+     </button>
     </div>
 
-    <p className="text-slate-500 leading-relaxed mb-6 text-sm">
+    <p className="text-slate-600 leading-relaxed mb-6 text-md">
      {project.description}
     </p>
 
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-slate-50">
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-slate-1000">
      <InfoBlock label="Program" value={project.program} />
      <InfoBlock label="Duration" value={project.duration} />
      <InfoBlock label="Team Size" value={project.team_size} />
@@ -415,7 +543,9 @@ function ProjectCard({ project, onApplicantAction }) {
     >
      <span className="text-sm font-bold text-slate-500 group-hover:text-indigo-600 transition-colors">
       {/* FIX: Now using safeApplicants.length */}
-      {isExpanded ? "Hide Applicant List" : `View Applicants`}
+      {isExpanded
+       ? "Hide Applicant List"
+       : `View Applicants (${applicants.length > 0 ? applicants.length : project.applicant_count || safeApplicants.length})`}
      </span>
      <div
       className={`transform transition-transform duration-300 p-1 rounded-full ${isExpanded ? "rotate-180 bg-indigo-50" : "bg-slate-50"}`}
@@ -529,14 +659,13 @@ function ProjectCard({ project, onApplicantAction }) {
   </div>
  );
 }
-
 function InfoBlock({ label, value }) {
  return (
   <div>
-   <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400 mb-1">
+   <p className="text-xs uppercase tracking-widest font-bold text-slate-500 mb-1">
     {label}
    </p>
-   <p className="text-sm font-bold text-slate-700">{value || "N/A"}</p>
+   <p className="text-md font-bold text-slate-800">{value || "N/A"}</p>
   </div>
  );
 }

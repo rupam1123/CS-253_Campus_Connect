@@ -48,34 +48,41 @@ exports.createProject = async (req, res) => {
 };
 
 // Get all projects
+// Get all projects
 exports.getAllProjects = async (req, res) => {
  try {
-  const [projects] = await db.promise().query("SELECT * FROM projects");
+  const query = `
+    SELECT p.*, 
+    (SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'pending') AS applicant_count 
+    FROM projects p
+    ORDER BY p.id DESC 
+  `;
+  const [projects] = await db.promise().query(query);
   res.status(200).json(projects);
  } catch (error) {
-  // THIS LINE will print the exact problem in your terminal!
   console.log("Error in getAllProjects:", error);
   res.status(500).json({ message: "Server error" });
  }
 };
-
 // Get a single project by ID
-exports.getProjectById = async (req, res) => {
+// Get projects ONLY for a specific professor
+exports.getProjectsByProfessor = async (req, res) => {
  try {
-  const { id } = req.params;
-  const [project] = await db
-   .promise()
-   .query("SELECT * FROM projects WHERE id = ?", [id]);
+  const { profName } = req.params; // Changed variable to profName
 
-  if (project.length === 0) {
-   return res.status(404).json({ message: "Project not found" });
-  }
+  const query = `
+    SELECT p.*, 
+    (SELECT COUNT(*) FROM applications a WHERE a.project_id = p.id AND a.status = 'pending') AS applicant_count 
+    FROM projects p
+    WHERE p.professor_id = ?
+    ORDER BY p.id DESC 
+  `;
 
-  res.status(200).json(project[0]);
+  const [projects] = await db.promise().query(query, [profName]);
+  res.status(200).json(projects);
  } catch (error) {
-  res
-   .status(500)
-   .json({ error: "Failed to retrieve project", details: error.message });
+  console.error("Error in getProjectsByProfessor:", error);
+  res.status(500).json({ message: "Server error" });
  }
 };
 
@@ -133,7 +140,9 @@ exports.updateProject = async (req, res) => {
 exports.deleteProject = async (req, res) => {
  try {
   const { id } = req.params;
-  const [result] = await db.query("DELETE FROM projects WHERE id = ?", [id]);
+  const [result] = await db
+   .promise()
+   .query("DELETE FROM projects WHERE id = ?", [id]);
 
   if (result.affectedRows === 0) {
    return res.status(404).json({ message: "Project not found" });
@@ -147,11 +156,12 @@ exports.deleteProject = async (req, res) => {
  }
 };
 
-exports.getApplicationsByProject = (req, res) => {
- const { project_id } = req.params;
+exports.getApplicationsByProject = async (req, res) => {
+ try {
+  const { project_id } = req.params;
 
- const query = `
-    SELECT 
+  const query = `
+    SELECT
       application_id,
       project_id,
       user_id,
@@ -169,30 +179,29 @@ exports.getApplicationsByProject = (req, res) => {
     ORDER BY created_at DESC
   `;
 
- db.query(query, [project_id], (err, results) => {
-  if (err) {
-   console.error(err);
-   return res.status(500).json({ message: "Error fetching applications" });
-  }
+  // Use await instead of a callback!
+  const [results] = await db.promise().query(query, [project_id]);
 
   res.status(200).json(results);
- });
+ } catch (error) {
+  console.error("Error fetching applications:", error);
+  res.status(500).json({ message: "Error fetching applications" });
+ }
 };
+exports.updateApplicationStatus = async (req, res) => {
+ try {
+  // Extract the new variables from the frontend request
+  const { application_id, status, email, name, projectTitle, profName } =
+   req.body;
 
-exports.updateApplicationStatus = (req, res) => {
- const { application_id, status, email, name } = req.body;
- //console.log(req.body);
- const query = `
+  const query = `
     UPDATE applications 
     SET status = ? 
     WHERE application_id = ?
   `;
 
- db.query(query, [status, application_id], async (err, result) => {
-  if (err) {
-   console.error(err);
-   return res.status(500).json({ message: "DB update failed" });
-  }
+  // Await the DB update
+  await db.promise().query(query, [status, application_id]);
 
   // ================= EMAIL PART =================
   try {
@@ -204,19 +213,22 @@ exports.updateApplicationStatus = (req, res) => {
     },
    });
 
+   // Constructing a more professional, multi-line email
    const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
-    subject: `Application ${status.toUpperCase()}`,
-    text: `Hello ${name}, your application has been ${status}.`,
+    subject: `Application Update: ${projectTitle}`,
+    text: `Dear ${name},\n\nWe are writing to inform you that the status of your application for the project "${projectTitle}" under Professor ${profName} has been updated.\n\nYour application is currently marked as: ${status.toUpperCase()}.\n\nThank you for your interest and effort.\n\nBest regards,\nCampus Connect Platform`,
    };
 
    await transporter.sendMail(mailOptions);
-
    res.json({ message: "Status updated + email sent" });
   } catch (emailErr) {
-   console.error(emailErr);
+   console.error("Email failed to send:", emailErr);
    res.json({ message: "Status updated but email failed" });
   }
- });
+ } catch (err) {
+  console.error("DB update failed:", err);
+  res.status(500).json({ message: "DB update failed" });
+ }
 };
