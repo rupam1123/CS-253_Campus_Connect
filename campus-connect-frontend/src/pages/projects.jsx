@@ -194,7 +194,7 @@ function Projects() {
       {filteredProjects.map((project) => (
        <div
         key={project.id}
-        className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-300 transition-all duration-300 flex flex-col"
+        className="bg-white rounded-2xl shadow-sm border border-slate-400 p-6 hover:shadow-xl hover:-translate-y-1 hover:border-indigo-700 transition-all duration-300 flex flex-col"
        >
         <div className="flex justify-between items-start mb-4">
          <span className="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-indigo-100">
@@ -209,7 +209,7 @@ function Projects() {
          {project.description}
         </p>
 
-        <div className="space-y-3 mb-6 bg-slate-50 p-4 rounded-xl border border-slate-100">
+        <div className="space-y-3 mb-6 bg-slate-200 p-4 rounded-xl border border-slate-400">
          <div className="flex items-center gap-2 text-sm text-slate-700 font-medium">
           <User size={16} className="text-indigo-500" />
           <span>
@@ -266,7 +266,7 @@ function Projects() {
           {selectedProject.title}
          </h3>
          <p className="text-sm text-slate-500 font-medium mt-1">
-          Application for {selectedProject.professor}
+          Application for {selectedProject.professor_id}'s project
          </p>
         </div>
         <button
@@ -378,18 +378,23 @@ function Projects() {
          </label>
          <textarea
           name="sop"
+          rows="5"
+          maxLength="500"
           value={applicationForm.sop}
           onChange={handleInputChange}
-          placeholder="Briefly explain why you are a good fit..."
+          placeholder="Briefly explain why you are a good fit (Max 500 characters)..."
           className="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors resize-none h-24 text-sm font-medium text-slate-700"
          />
+         <p className="text-right text-[10px] text-slate-400 mt-1">
+          Max 500 characters
+         </p>
         </div>
 
         <div className="flex gap-3 pt-4 border-t border-slate-100">
          <button
           type="button"
           onClick={() => setSelectedProject(null)}
-          className="flex-1 px-4 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+          className="px-6 py-6 bg-gray-300 font-bold text-slate-700 hover:bg-slate-500 hover:text-slate-100 rounded-xl transition-colors"
          >
           Cancel
          </button>
