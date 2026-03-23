@@ -38,7 +38,7 @@ function ProfessorProject() {
     // console.log("Fetching projects from backend...", data);
     setProjects(data);
    } catch (error) {
-    console.error("Error loading projects:", error);
+    // console.error("Error loading projects:", error);
     onApplicantAction("Failed to load projects from server.", "error");
    } finally {
     // Turn off the loading state when finished

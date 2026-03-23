@@ -1,4 +1,3 @@
-//import { useState } from "react";
 import { useState, useEffect } from "react";
 
 import DashboardLayout from "../layouts/dashboard_layout";
@@ -35,22 +34,18 @@ function Forum() {
  useEffect(() => {
   const fetchPosts = async () => {
    try {
-    // Replace with your actual backend URL port (e.g., http://localhost:5000/posts)
-    const response = await fetch("http://localhost:5001/api/forum/posts");
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = user.id;
+
+    // 2. Pass it to the backend via the URL
+    const response = await fetch(
+     `http://localhost:5001/api/forum/posts?userId=${userId}`,
+    );
+
     if (response.ok) {
      const data = await response.json();
-     // 1. Grab the "memory" of votes from the browser
-     const savedVotes = JSON.parse(
-      localStorage.getItem("my_forum_votes") || "{}",
-     );
-
-     // 2. Loop through the backend data and re-apply the user's past votes
-     const postsWithMemory = data.map((post) => ({
-      ...post,
-      // If the post ID is in local storage, set userVote (which freezes the button!)
-      userVote: savedVotes[post.id || post._id] || null,
-     }));
-     setPosts(postsWithMemory);
+     // 3. The backend now magically provides the 'userVote' property for us!
+     setPosts(data);
     }
    } catch (error) {
     console.error("Failed to fetch posts:", error);
@@ -59,6 +54,7 @@ function Forum() {
 
   fetchPosts();
  }, []);
+
  // ADVANCED VOTING LOGIC (Ensures 1 vote per user, allows toggling/switching)
  const handleVote = async (id, voteType) => {
   // 1. Find the post to check its current status
@@ -92,19 +88,23 @@ function Forum() {
   // 5. TRIGGER THE POPUP
   setToastMessage(`Successfully ${voteType}voted!`);
   setTimeout(() => setToastMessage(null), 3000);
-  const currentSavedVotes = JSON.parse(
-   localStorage.getItem("my_forum_votes") || "{}",
-  );
-  currentSavedVotes[id] = voteType; // Example: { "1": "up", "2": "down" }
-  localStorage.setItem("my_forum_votes", JSON.stringify(currentSavedVotes));
-
-  // 6. Tell the Backend to save it
+  // 5. Tell the Backend to save it securely
   try {
+   const user = JSON.parse(localStorage.getItem("user") || "{}");
+   const userId = user.id;
+
+   if (!userId) {
+    alert("You must be logged in to vote!");
+    return;
+   }
+
    const response = await fetch("http://localhost:5001/api/forum/vote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
      postId: id,
+     userId: userId, // Send who is voting
+     voteType: voteType, // Send 'up' or 'down'
      upvotes: newUpvotes,
      downvotes: newDownvotes,
     }),
@@ -315,7 +315,7 @@ function Forum() {
        >
         {/* VOTING COLUMN */}
         {/* VOTING COLUMN */}
-        <div className="flex flex-col items-center gap-1 bg-slate-50 rounded-xl p-2 h-fit border border-slate-100 min-w-[50px]">
+        <div className="flex flex-col items-center gap-1 bg-slate-100 rounded-xl p-2 h-fit border border-slate-100 min-w-[50px]">
          <button
           onClick={() => handleVote(post.id || post._id, "up")}
           disabled={!!post.userVote} // FREEZES THE BUTTON IF THEY VOTED
@@ -374,36 +374,37 @@ function Forum() {
           </span>
          </div>
 
-         <p className="text-slate-600 text-sm leading-relaxed">
+         <p className="text-slate-600 text-md leading-relaxed">
           {post.content}
          </p>
 
          <div className="flex flex-wrap items-center gap-4 pt-2 mt-2 border-t border-slate-50 text-xs font-bold text-slate-400">
           <div className="flex items-center gap-1">
-           <UserCircle size={14} className="text-slate-500" /> Anonymous User
+           <UserCircle size={20} className="text-slate-500" /> Anonymous User
           </div>
           <div className="flex items-center gap-1">
-           <Clock size={14} className="text-slate-500" /> {post.time}
+           <Clock size={20} className="text-slate-500" />{" "}
+           {new Date(post.created_at).toLocaleString()}
           </div>
           <div
            onClick={() => handleToggleComments(post.id)}
            className="flex items-center gap-1 hover:text-indigo-600 cursor-pointer transition-colors"
           >
-           <MessageSquare size={14} className="text-indigo-500" />{" "}
-           {post.comments} Comments
+           <MessageSquare size={20} className="text-indigo-500" /> Comments (
+           {post.comments})
           </div>
          </div>
 
          {/* --- COMMENTS DROP-DOWN UI --- */}
          {expandedPostId === post.id && (
-          <div className="mt-4 pt-4 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+          <div className="mt-4 pt-4 border-t border-slate-300 animate-in slide-in-from-top-2 duration-200">
            {/* 1. Display Existing Comments */}
            <div className="space-y-3 mb-4 max-h-64 overflow-y-auto pr-2">
             {comments.length > 0 ? (
              comments.map((comment) => (
               <div
                key={comment.id}
-               className="bg-slate-50 p-3 rounded-xl border border-slate-200"
+               className="bg-slate-100 p-3 rounded-xl border border-slate-400"
               >
                <p className="text-slate-700 text-sm">{comment.content}</p>
                <div className="flex justify-between items-center mt-2">
@@ -415,7 +416,7 @@ function Forum() {
               </div>
              ))
             ) : (
-             <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+             <p className="text-xs text-slate-400 italic text-center py-4 bg-slate-100 rounded-lg border border-dashed border-slate-500">
               No comments yet. Be the first to share your thoughts!
              </p>
             )}
@@ -428,7 +429,7 @@ function Forum() {
              placeholder="Write a comment..."
              value={newCommentText}
              onChange={(e) => setNewCommentText(e.target.value)}
-             className="flex-1 px-4 py-2 bg-white border-2 border-slate-200 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-400 transition-colors"
+             className="flex-1 px-4 py-2 bg-white border-2 border-slate-300 rounded-lg text-sm font-medium focus:outline-none focus:border-indigo-400 transition-colors"
             />
             <button
              onClick={() => handleAddComment(post.id)}
@@ -527,7 +528,7 @@ function Forum() {
          <button
           type="button"
           onClick={() => setShowNewPostModal(false)}
-          className="flex-1 px-4 py-3 font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+          className="flex-1 px-4 py-3 bg-gray-300 font-bold text-slate-700 hover:bg-slate-500 hover:text-slate-100 rounded-xl transition-colors"
          >
           Cancel
          </button>
