@@ -43,7 +43,7 @@ function Signup() {
    // ======================
    // CALL BACKEND SEND OTP
    // ======================
-   await axios.post("http://localhost:5001/api/auth/send-otp", {
+   await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/send-otp`, {
     email,
    });
 
@@ -64,7 +64,7 @@ function Signup() {
    // ======================
    // VERIFY OTP + SIGNUP
    // ======================
-   await axios.post("http://localhost:5001/api/auth/verify-otp", {
+   await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
     name,
     email,
     password,

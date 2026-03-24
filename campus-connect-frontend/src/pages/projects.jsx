@@ -41,7 +41,7 @@ function Projects() {
   const fetchProjects = async () => {
    try {
     const res = await axios.get(
-     "http://localhost:5001/api/projects/get-all-project",
+     `${import.meta.env.VITE_API_URL}/api/projects/get-all-project`,
     );
 
     setProjects(res.data); // or res.data.projects (depends on backend)
@@ -75,7 +75,7 @@ function Projects() {
   setSelectedProject(null);
   try {
    const res = await axios.post(
-    "http://localhost:5001/api/applications/apply",
+    `${import.meta.env.VITE_API_URL}/api/applications/apply`,
     {
      project_id: selectedProject.id,
      user_id: user.id,

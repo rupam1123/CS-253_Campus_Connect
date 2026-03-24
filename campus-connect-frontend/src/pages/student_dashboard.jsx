@@ -44,7 +44,7 @@ function StudentDashboard() {
  // --- FETCH DASHBOARD DATA (Pending Count & Recent Apps) ---
  useEffect(() => {
   if (userId) {
-   fetch(`http://localhost:5001/api/applications/dashboard/${userId}`)
+   fetch(`${import.meta.env.VITE_API_URL}/api/applications/dashboard/${userId}`)
     .then((res) => res.json())
     .then((data) => {
      if (data.success) {
@@ -56,7 +56,7 @@ function StudentDashboard() {
   }
   if (userId) {
    // Adjust the URL/port based on your backend configuration
-   fetch(`http://localhost:5001/api/courses/${userId}`)
+   fetch(`${import.meta.env.VITE_API_URL}/api/courses/${userId}`)
     .then((res) => res.json())
     .then((data) => {
      if (data.courses) {

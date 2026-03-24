@@ -42,7 +42,7 @@ function Feedback() {
  useEffect(() => {
   if (selected && courseCode) {
    fetch(
-    `http://localhost:5001/api/feedback/discussions/${encodeURIComponent(courseCode)}?userId=${userId}`,
+    `${import.meta.env.VITE_API_URL}/api/feedback/discussions/${encodeURIComponent(courseCode)}?userId=${userId}`,
    )
     .then((res) => res.json())
     .then((data) => {
@@ -65,7 +65,7 @@ function Feedback() {
  useEffect(() => {
   if (userId) {
    // Restored the correct URL for fetching user courses
-   fetch(`http://localhost:5001/api/courses/${userId}`)
+   fetch(`${import.meta.env.VITE_API_URL}/api/courses/${userId}`)
     .then((res) => res.json())
     .then((data) => {
      if (data.courses) {
@@ -118,13 +118,16 @@ function Feedback() {
 
   try {
    // 3. Send data to backend
-   const response = await fetch("http://localhost:5001/api/feedback/submit", {
-    method: "POST",
-    headers: {
-     "Content-Type": "application/json",
+   const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/feedback/submit`,
+    {
+     method: "POST",
+     headers: {
+      "Content-Type": "application/json",
+     },
+     body: JSON.stringify(payload),
     },
-    body: JSON.stringify(payload),
-   });
+   );
 
    const data = await response.json();
 
@@ -198,15 +201,18 @@ function Feedback() {
 
   // 4. Send the user's vote action to the backend
   try {
-   const response = await fetch("http://localhost:5001/api/feedback/vote", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-     feedbackId: id,
-     userId: userId, // Pass the user ID from localStorage
-     voteType: voteType,
-    }),
-   });
+   const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/feedback/vote`,
+    {
+     method: "PUT",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+      feedbackId: id,
+      userId: userId, // Pass the user ID from localStorage
+      voteType: voteType,
+     }),
+    },
+   );
 
    if (!response.ok) {
     // If backend rejects (e.g., they bypassed the UI freeze), revert the UI here if needed

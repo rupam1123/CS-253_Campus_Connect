@@ -39,7 +39,7 @@ function Forum() {
 
     // 2. Pass it to the backend via the URL
     const response = await fetch(
-     `http://localhost:5001/api/forum/posts?userId=${userId}`,
+     `${import.meta.env.VITE_API_URL}/api/forum/posts?userId=${userId}`,
     );
 
     if (response.ok) {
@@ -98,17 +98,20 @@ function Forum() {
     return;
    }
 
-   const response = await fetch("http://localhost:5001/api/forum/vote", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-     postId: id,
-     userId: userId, // Send who is voting
-     voteType: voteType, // Send 'up' or 'down'
-     upvotes: newUpvotes,
-     downvotes: newDownvotes,
-    }),
-   });
+   const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/forum/vote`,
+    {
+     method: "POST",
+     headers: { "Content-Type": "application/json" },
+     body: JSON.stringify({
+      postId: id,
+      userId: userId, // Send who is voting
+      voteType: voteType, // Send 'up' or 'down'
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+     }),
+    },
+   );
 
    if (!response.ok) {
     console.error("Server rejected the vote");
@@ -127,18 +130,21 @@ function Forum() {
   }
 
   try {
-   const response = await fetch("http://localhost:5001/api/forum/create-post", {
-    method: "POST",
-    headers: {
-     "Content-Type": "application/json",
+   const response = await fetch(
+    `${import.meta.env.VITE_API_URL}/api/forum/create-post`,
+    {
+     method: "POST",
+     headers: {
+      "Content-Type": "application/json",
+     },
+     body: JSON.stringify({
+      title: newPost.title,
+      content: newPost.content,
+      tag: newPost.tag,
+      author: "You",
+     }),
     },
-    body: JSON.stringify({
-     title: newPost.title,
-     content: newPost.content,
-     tag: newPost.tag,
-     author: "You",
-    }),
-   });
+   );
 
    if (response.ok) {
     const savedPost = await response.json();
@@ -198,7 +204,7 @@ function Forum() {
 
   try {
    const response = await fetch(
-    `http://localhost:5001/api/forum/comments/${postId}`,
+    `${import.meta.env.VITE_API_URL}/api/forum/comments/${postId}`,
    );
    if (response.ok) {
     const data = await response.json();

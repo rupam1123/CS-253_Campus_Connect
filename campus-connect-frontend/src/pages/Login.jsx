@@ -77,10 +77,13 @@ function Login() {
   const toastId = toast.loading("Logging in...");
 
   try {
-   const res = await axios.post("http://localhost:5001/api/auth/login", {
-    email,
-    password,
-   });
+   const res = await axios.post(
+    `${import.meta.env.VITE_API_URL}/api/auth/login`,
+    {
+     email,
+     password,
+    },
+   );
 
    localStorage.setItem("token", res.data.token);
    //console.log("Login successful, received token:", res.data.token);
@@ -107,7 +110,7 @@ function Login() {
 
   const toastId = toast.loading("Sending OTP...");
   try {
-   await axios.post("http://localhost:5001/api/auth/send-reset-otp", {
+   await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/send-reset-otp`, {
     email: resetEmail,
    });
    toast.success("OTP sent to your email!", { id: toastId });
@@ -130,7 +133,7 @@ function Login() {
 
   const toastId = toast.loading("Resetting password...");
   try {
-   await axios.post("http://localhost:5001/api/auth/reset-password", {
+   await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/reset-password`, {
     email: resetEmail,
     otp: enteredOtp,
     newPassword: newPassword,

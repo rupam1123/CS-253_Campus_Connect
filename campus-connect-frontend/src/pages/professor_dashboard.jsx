@@ -304,7 +304,7 @@ function ProfessorDashboard() {
   if (selectedCourse) {
    // 1. Fetch Chart Averages
    fetch(
-    `http://localhost:5001/api/professor/analytics/${encodeURIComponent(selectedCourse)}`,
+    `${import.meta.env.VITE_API_URL}/api/professor/analytics/${encodeURIComponent(selectedCourse)}`,
    )
     .then((res) => res.json())
     .then((data) => {
@@ -314,7 +314,7 @@ function ProfessorDashboard() {
 
    // 2. Fetch Student Comments
    fetch(
-    `http://localhost:5001/api/professor/comments/${encodeURIComponent(selectedCourse)}`,
+    `${import.meta.env.VITE_API_URL}/api/professor/comments/${encodeURIComponent(selectedCourse)}`,
    )
     .then((res) => res.json())
     .then((data) => {

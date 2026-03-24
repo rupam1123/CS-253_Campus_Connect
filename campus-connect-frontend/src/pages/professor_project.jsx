@@ -35,7 +35,7 @@ function ProfessorProject() {
 
     // 2. Call the backend using the encoded professor's name
     const response = await fetch(
-     `http://localhost:5001/api/projects/professor/${encodeURIComponent(profName)}`,
+     `${import.meta.env.VITE_API_URL}/api/projects/professor/${encodeURIComponent(profName)}`,
     );
 
     if (!response.ok) {
@@ -100,7 +100,7 @@ function ProfessorProject() {
 
    // 3. Send the formatted payload instead of the raw form
    const response = await fetch(
-    "http://localhost:5001/api/projects/create-project",
+    `${import.meta.env.VITE_API_URL}/api/projects/create-project`,
     {
      method: "POST",
      headers: {
@@ -169,7 +169,7 @@ function ProfessorProject() {
 
   try {
    const response = await fetch(
-    `http://localhost:5001/api/projects/delete-project/${projectToDelete}`,
+    `${import.meta.env.VITE_API_URL}/api/projects/delete-project/${projectToDelete}`,
     {
      method: "DELETE",
     },
@@ -456,7 +456,9 @@ function ProjectCard({ project, onApplicantAction, onDelete }) {
    console.log(`Fetching applications for Project ID: ${project.id}`); // Debugging start
 
    axios
-    .get(`http://localhost:5001/api/projects/applications/${project.id}`)
+    .get(
+     `${import.meta.env.VITE_API_URL}/api/projects/applications/${project.id}`,
+    )
     .then((res) => {
      console.log("RAW Database Response:", res.data); // See exactly what came back
 
@@ -489,14 +491,17 @@ function ProjectCard({ project, onApplicantAction, onDelete }) {
 
   try {
    // ✅ 3. API call in background
-   await axios.put("http://localhost:5001/api/projects/applications/status", {
-    application_id: app.application_id,
-    status: status,
-    email: app.email_id,
-    name: app.full_name,
-    projectTitle: project.title, // <-- Added Project Title
-    profName: project.professor_id, // <-- Added Professor Name
-   });
+   await axios.put(
+    `${import.meta.env.VITE_API_URL}/api/projects/applications/status`,
+    {
+     application_id: app.application_id,
+     status: status,
+     email: app.email_id,
+     name: app.full_name,
+     projectTitle: project.title, // <-- Added Project Title
+     profName: project.professor_id, // <-- Added Professor Name
+    },
+   );
   } catch (err) {
    console.error(err);
    onApplicantAction("Server error!", "error");
