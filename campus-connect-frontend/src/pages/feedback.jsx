@@ -1,376 +1,3 @@
-// import { useState } from "react";
-// import DashboardLayout from "../layouts/dashboard_layout";
-// import {
-//  Star,
-//  Send,
-//  ArrowBigUp,
-//  ArrowBigDown,
-//  MessageSquare,
-//  ChevronLeft,
-//  Info,
-//  CheckCircle,
-//  X,
-// } from "lucide-react";
-
-// function Feedback() {
-//  const [courseCode, setCourseCode] = useState("");
-//  const [selected, setSelected] = useState(false);
-//  const [comment, setComment] = useState("");
-//  const [ratings, setRatings] = useState({});
-//  const [toastMessage, setToastMessage] = useState(null);
-
-//  // Mock data updated with userVote property
-//  const [feedbacks, setFeedbacks] = useState([
-//   {
-//    id: 1,
-//    course: "Operating Systems",
-//    text:
-//     "The explanation of Semaphore logic was a bit too fast. Could we get more examples?",
-//    upvotes: 12,
-//    downvotes: 2,
-//    userVote: null,
-//    replies: [
-//     "Thanks for the feedback! I'll prepare a dedicated problem-solving session for Semaphores next week.",
-//    ],
-//   },
-//   {
-//    id: 2,
-//    course: "Operating Systems",
-//    text:
-//     "Loving the hands-on lab sessions! Very helpful for understanding kernel threads.",
-//    upvotes: 24,
-//    downvotes: 0,
-//    userVote: "up",
-//    replies: [],
-//   },
-//  ]);
-
-//  const parameters = [
-//   "Content Quality",
-//   "Teaching Delivery",
-//   "Clarity",
-//   "Engagement",
-//   "Lecture Pace",
-//  ];
-
-//  const handleRating = (param, value) => {
-//   setRatings({ ...ratings, [param]: value });
-//  };
-
-//  const submitFeedback = (e) => {
-//   e.preventDefault();
-//   if (!comment.trim()) return;
-
-//   const newFeedback = {
-//    id: Date.now(),
-//    course: courseCode,
-//    text: comment,
-//    ratings,
-//    upvotes: 1, // Automatically upvote own feedback
-//    downvotes: 0,
-//    userVote: "up", // Track that the user upvoted this
-//    replies: [],
-//   };
-
-//   setFeedbacks([newFeedback, ...feedbacks]);
-//   setComment("");
-//   setRatings({});
-
-//   // Trigger Toast Notification
-//   setToastMessage("Your anonymous feedback has been securely submitted.");
-//   setTimeout(() => setToastMessage(null), 3000);
-//  };
-
-//  // ADVANCED VOTING LOGIC (1 vote per user, toggling supported)
-//  const handleVote = (id, voteType) => {
-//   setFeedbacks(
-//    feedbacks.map((f) => {
-//     if (f.id === id) {
-//      let newUpvotes = f.upvotes;
-//      let newDownvotes = f.downvotes;
-//      let newUserVote = f.userVote;
-
-//      // If clicking the same vote again, remove the vote
-//      if (f.userVote === voteType) {
-//       voteType === "up" ? newUpvotes-- : newDownvotes--;
-//       newUserVote = null;
-//      }
-//      // Otherwise, apply the new vote
-//      else {
-//       if (f.userVote === "up") newUpvotes--;
-//       if (f.userVote === "down") newDownvotes--;
-
-//       voteType === "up" ? newUpvotes++ : newDownvotes++;
-//       newUserVote = voteType;
-//      }
-
-//      return {
-//       ...f,
-//       upvotes: newUpvotes,
-//       downvotes: newDownvotes,
-//       userVote: newUserVote,
-//      };
-//     }
-//     return f;
-//    }),
-//   );
-//  };
-
-//  const courseOptions = [
-//   "Operating Systems",
-//   "Data Structures",
-//   "Computer Networks",
-//  ];
-
-//  return (
-//   <DashboardLayout>
-//    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
-//     {/* TOAST NOTIFICATION */}
-//     {toastMessage && (
-//      <div className="fixed bottom-8 right-8 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 z-[100] animate-in slide-in-from-bottom-8 slide-in-from-right-8 duration-300">
-//       <CheckCircle size={24} />
-//       <div>
-//        <p className="text-sm font-black uppercase tracking-widest text-green-200 mb-0.5">
-//         Success
-//        </p>
-//        <p className="font-bold">{toastMessage}</p>
-//       </div>
-//       <button
-//        onClick={() => setToastMessage(null)}
-//        className="ml-4 text-green-200 hover:text-white"
-//       >
-//        <X size={18} />
-//       </button>
-//      </div>
-//     )}
-
-//     {!selected ? (
-//      /* COURSE SELECTION SCREEN */
-//      <div className="max-w-xl mx-auto mt-20">
-//       <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-200 text-center">
-//        <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-//         <MessageSquare size={32} />
-//        </div>
-//        <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">
-//         Course Feedback
-//        </h2>
-//        <p className="text-slate-500 mb-8">
-//         Select a course to submit anonymous feedback or view peer discussions.
-//        </p>
-
-//        <div className="space-y-4 text-left">
-//         <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest">
-//          Select Enrolled Course
-//         </label>
-//         <select
-//          value={courseCode}
-//          onChange={(e) => setCourseCode(e.target.value)}
-//          className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-bold text-slate-700 appearance-none"
-//         >
-//          <option value="" disabled>
-//           Choose a course...
-//          </option>
-//          {courseOptions.map((course) => (
-//           <option key={course} value={course}>
-//            {course}
-//           </option>
-//          ))}
-//         </select>
-
-//         <button
-//          onClick={() => courseCode && setSelected(true)}
-//          disabled={!courseCode}
-//          className="w-full mt-4 bg-indigo-600 disabled:bg-slate-300 hover:bg-indigo-700 text-white px-6 py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2"
-//         >
-//          Enter Feedback Portal
-//         </button>
-//        </div>
-//       </div>
-//      </div>
-//     ) : (
-//      /* FEEDBACK DASHBOARD */
-//      <div className="space-y-6">
-//       <div className="flex items-center gap-4 border-b border-slate-200 pb-6">
-//        <button
-//         onClick={() => setSelected(false)}
-//         className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-300 rounded-xl transition-colors"
-//        >
-//         <ChevronLeft size={24} />
-//        </button>
-//        <div>
-//         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-//          {courseCode}
-//         </h2>
-//         <p className="text-slate-500 font-medium">
-//          Anonymous Student Feedback Portal
-//         </p>
-//        </div>
-//       </div>
-
-//       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-//        {/* LEFT COLUMN: SUBMIT FEEDBACK */}
-//        <div className="lg:col-span-5 space-y-6">
-//         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-//          <div className="flex items-center gap-2 mb-6 p-4 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
-//           <Info size={20} className="shrink-0" />
-//           <p className="text-xs font-medium leading-relaxed">
-//            Your identity is protected. Professors only see aggregated ratings
-//            and anonymous comments.
-//           </p>
-//          </div>
-
-//          <form onSubmit={submitFeedback} className="space-y-6">
-//           <div className="space-y-4">
-//            {parameters.map((param) => (
-//             <div key={param} className="flex items-center justify-between">
-//              <p className="text-sm font-bold text-slate-700">{param}</p>
-//              <div className="flex gap-1">
-//               {[1, 2, 3, 4, 5].map((star) => (
-//                <button
-//                 type="button"
-//                 key={star}
-//                 onClick={() => handleRating(param, star)}
-//                 className="transition-transform hover:scale-110 focus:outline-none"
-//                >
-//                 <Star
-//                  size={24}
-//                  className={
-//                   star <= (ratings[param] || 0)
-//                    ? "fill-yellow-400 text-yellow-400"
-//                    : "fill-slate-100 text-slate-200 hover:fill-yellow-200 hover:text-yellow-200"
-//                  }
-//                 />
-//                </button>
-//               ))}
-//              </div>
-//             </div>
-//            ))}
-//           </div>
-
-//           <div className="pt-4 border-t border-slate-100">
-//            <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest mb-2">
-//             Detailed Feedback
-//            </label>
-//            <textarea
-//             required
-//             placeholder="What's going well? What could be improved?"
-//             value={comment}
-//             onChange={(e) => setComment(e.target.value)}
-//             className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors resize-none h-32 text-sm text-slate-700"
-//            />
-//           </div>
-
-//           <button
-//            type="submit"
-//            className="w-full bg-slate-900 hover:bg-indigo-600 text-white px-4 py-3 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-//           >
-//            <Send size={18} /> Submit Anonymously
-//           </button>
-//          </form>
-//         </div>
-//        </div>
-
-//        {/* RIGHT COLUMN: FEEDBACK FEED */}
-//        <div className="lg:col-span-7">
-//         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[700px]">
-//          <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-//           <h3 className="font-bold text-slate-800 flex items-center gap-2">
-//            <MessageSquare size={18} className="text-indigo-500" />
-//            Class Discussion
-//           </h3>
-//           <span className="text-xs font-bold bg-slate-200 text-slate-600 px-3 py-1 rounded-full uppercase">
-//            Most Helpful
-//           </span>
-//          </div>
-
-//          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50">
-//           {feedbacks.filter((f) => f.course === courseCode).length === 0 ? (
-//            <div className="text-center py-20">
-//             <MessageSquare size={48} className="mx-auto text-slate-300 mb-4" />
-//             <p className="text-slate-500 font-medium">
-//              No feedback submitted yet for this course.
-//             </p>
-//            </div>
-//           ) : (
-//            feedbacks
-//             .filter((f) => f.course === courseCode)
-//             .map((f) => (
-//              <div
-//               key={f.id}
-//               className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex gap-4 transition-all hover:border-indigo-200"
-//              >
-//               {/* UPDATED VOTING COLUMN */}
-//               <div className="flex flex-col items-center gap-1 bg-slate-50 rounded-lg p-2 h-fit border border-slate-100 min-w-[50px]">
-//                <button
-//                 onClick={() => handleVote(f.id, "up")}
-//                 className={`transition-colors p-1 rounded-md ${f.userVote === "up" ? "text-green-600 bg-green-100" : "text-slate-400 hover:text-green-600 hover:bg-slate-200"}`}
-//                >
-//                 <ArrowBigUp
-//                  size={24}
-//                  className={f.userVote === "up" ? "fill-green-600" : ""}
-//                 />
-//                </button>
-//                <span
-//                 className={`font-black text-sm ${f.userVote === "up" ? "text-green-600" : f.userVote === "down" ? "text-red-600" : "text-slate-700"}`}
-//                >
-//                 {f.upvotes - f.downvotes}
-//                </span>
-//                <button
-//                 onClick={() => handleVote(f.id, "down")}
-//                 className={`transition-colors p-1 rounded-md ${f.userVote === "down" ? "text-red-600 bg-red-100" : "text-slate-400 hover:text-red-600 hover:bg-slate-200"}`}
-//                >
-//                 <ArrowBigDown
-//                  size={24}
-//                  className={f.userVote === "down" ? "fill-red-600" : ""}
-//                 />
-//                </button>
-//               </div>
-
-//               {/* CONTENT COLUMN */}
-//               <div className="flex-1 space-y-3">
-//                <div className="flex justify-between items-start">
-//                 <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">
-//                  Anonymous Student
-//                 </span>
-//                </div>
-
-//                <p className="text-slate-700 text-sm leading-relaxed">
-//                 {f.text}
-//                </p>
-
-//                {/* PROFESSOR REPLIES */}
-//                {f.replies && f.replies.length > 0 && (
-//                 <div className="mt-4 space-y-2">
-//                  {f.replies.map((reply, idx) => (
-//                   <div
-//                    key={idx}
-//                    className="bg-indigo-50 border-l-4 border-indigo-500 p-3 rounded-r-xl"
-//                   >
-//                    <p className="text-xs font-black text-indigo-700 uppercase tracking-widest mb-1">
-//                     Professor Response
-//                    </p>
-//                    <p className="text-sm text-indigo-900">{reply}</p>
-//                   </div>
-//                  ))}
-//                 </div>
-//                )}
-//               </div>
-//              </div>
-//             ))
-//           )}
-//          </div>
-//         </div>
-//        </div>
-//       </div>
-//      </div>
-//     )}
-//    </div>
-//   </DashboardLayout>
-//  );
-// }
-
-// export default Feedback;
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "../layouts/dashboard_layout";
 import {
@@ -382,8 +9,13 @@ import {
  ChevronLeft,
  Info,
  CheckCircle,
- AlertCircle, // <-- Added for error toast
+ AlertCircle,
  X,
+ User, // <-- Add this
+ Clock, // <-- Add this
+ MessageCircle, // <-- Add this
+ ChevronDown, // <-- Add this
+ Check,
 } from "lucide-react";
 
 function Feedback() {
@@ -392,7 +24,7 @@ function Feedback() {
  const [selected, setSelected] = useState(false);
  const [comment, setComment] = useState("");
  const [ratings, setRatings] = useState({});
-
+ const [isDropdownOpen, setIsDropdownOpen] = useState(false);
  // Toast states
  const [toastMessage, setToastMessage] = useState(null);
  const [toastType, setToastType] = useState("success"); // 'success' or 'error'
@@ -406,12 +38,11 @@ function Feedback() {
  // Mock data for the discussion feed
 
  const [feedbacks, setFeedbacks] = useState([]);
- // NEW EFFECT: Fetch discussions when the user enters the portal
+ // Fetch discussions when the user enters the portal
  useEffect(() => {
   if (selected && courseCode) {
-   // Encode the course name just in case it has spaces (e.g. "Operating Systems" -> "Operating%20Systems")
    fetch(
-    `http://localhost:5001/api/feedback/discussions/${encodeURIComponent(courseCode)}`,
+    `http://localhost:5001/api/feedback/discussions/${encodeURIComponent(courseCode)}?userId=${userId}`,
    )
     .then((res) => res.json())
     .then((data) => {
@@ -421,8 +52,7 @@ function Feedback() {
     })
     .catch((err) => console.error("Failed to fetch discussions:", err));
   }
- }, [selected, courseCode]); // Runs every time 'selected' or 'courseCode' changes
-
+ }, [selected, courseCode, userId]); // Added userId to dependencies
  const parameters = [
   "Content Quality",
   "Teaching Delivery",
@@ -434,6 +64,7 @@ function Feedback() {
  // FETCH COURSES
  useEffect(() => {
   if (userId) {
+   // Restored the correct URL for fetching user courses
    fetch(`http://localhost:5001/api/courses/${userId}`)
     .then((res) => res.json())
     .then((data) => {
@@ -445,6 +76,17 @@ function Feedback() {
   }
  }, [userId]);
 
+ // Close dropdown when clicking outside
+ useEffect(() => {
+  const handleClickOutside = () => {
+   if (isDropdownOpen) setIsDropdownOpen(false);
+  };
+  // We attach it to the window, but we only want it to fire if the menu is open
+  if (isDropdownOpen) {
+   window.addEventListener("click", handleClickOutside);
+  }
+  return () => window.removeEventListener("click", handleClickOutside);
+ }, [isDropdownOpen]);
  // --- HANDLERS ---
  const handleRating = (param, value) => {
   setRatings({ ...ratings, [param]: value });
@@ -523,112 +165,59 @@ function Feedback() {
   setTimeout(() => setToastMessage(null), 4000);
  };
 
- //
-
- //   // 1. Find the feedback to check its current status
- //   const feedbackToVote = feedbacks.find((f) => f.id === id);
-
- //   // 2. THE FREEZE CHECK: If they already voted, do absolutely nothing.
- //   if (feedbackToVote && feedbackToVote.userVote) {
- //     return;
- //   }
-
- //   // 3. Calculate the new numbers (Adding 1 to whichever they picked)
- //   let newUpvotes = feedbackToVote.upvotes || 0;
- //   let newDownvotes = feedbackToVote.downvotes || 0;
-
- //   voteType === "up" ? newUpvotes++ : newDownvotes++;
-
- //   // 4. Update the UI instantly and lock in their 'userVote'
- //   setFeedbacks(
- //     feedbacks.map((f) => {
- //       if (f.id === id) {
- //         return { ...f, upvotes: newUpvotes, downvotes: newDownvotes, userVote: voteType };
- //       }
- //       return f;
- //     })
- //   );
-
- //   // 5. Send the new totals to the backend to save permanently
- //   try {
- //     await fetch("http://localhost:5001/api/feedback/vote", {
- //       method: "PUT",
- //       headers: {
- //         "Content-Type": "application/json",
- //       },
- //       body: JSON.stringify({
- //         feedbackId: id,
- //         upvotes: newUpvotes,
- //         downvotes: newDownvotes
- //       }),
- //     });
- //   } catch (error) {
- //     console.error("Failed to save vote to database:", error);
- //   }
- // };
  const handleVote = async (id, voteType) => {
-  // Variables to hold the final numbers we will send to the database
-  let updatedUpvotes = 0;
-  let updatedDownvotes = 0;
+  // 1. Find the feedback item
+  const feedbackToVote = feedbacks.find((f) => f.id === id);
 
-  const updatedFeedbacks = feedbacks.map((f) => {
-   if (f.id === id) {
-    let newUpvotes = f.upvotes || 0;
-    let newDownvotes = f.downvotes || 0;
-    let newUserVote = f.userVote;
+  // 2. THE FREEZE CHECK: If they already voted, stop and show error
+  if (feedbackToVote && feedbackToVote.userVote) {
+   setToastType("error");
+   setToastMessage("You can only vote once per comment.");
+   setTimeout(() => setToastMessage(null), 3000);
+   return;
+  }
 
-    // SCENARIO 1: They clicked the exact same button they already pressed.
-    // Action: Remove their vote (Toggle off)
-    if (f.userVote === voteType) {
-     voteType === "up" ? newUpvotes-- : newDownvotes--;
-     newUserVote = null;
-    }
-
-    // SCENARIO 2 & 3: They are voting for the first time, OR switching their vote.
-    else {
-     // If they are switching, subtract their old vote first
-     if (f.userVote === "up") newUpvotes--;
-     if (f.userVote === "down") newDownvotes--;
-
-     // Now add their new vote
+  // 3. Optimistically update UI so it feels instant
+  setFeedbacks(
+   feedbacks.map((f) => {
+    if (f.id === id) {
+     let newUpvotes = f.upvotes;
+     let newDownvotes = f.downvotes;
      voteType === "up" ? newUpvotes++ : newDownvotes++;
-     newUserVote = voteType;
+
+     return {
+      ...f,
+      upvotes: newUpvotes,
+      downvotes: newDownvotes,
+      userVote: voteType,
+     };
     }
+    return f;
+   }),
+  );
 
-    // Save the calculated totals to our variables so we can send them to the DB
-    updatedUpvotes = newUpvotes;
-    updatedDownvotes = newDownvotes;
-
-    return {
-     ...f,
-     upvotes: newUpvotes,
-     downvotes: newDownvotes,
-     userVote: newUserVote,
-    };
-   }
-   return f;
-  });
-
-  // Update the UI instantly so the arrow changes color
-  setFeedbacks(updatedFeedbacks);
-
-  // Send the new totals to the backend in the background
+  // 4. Send the user's vote action to the backend
   try {
-   await fetch("http://localhost:5001/api/feedback/vote", {
+   const response = await fetch("http://localhost:5001/api/feedback/vote", {
     method: "PUT",
-    headers: {
-     "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
      feedbackId: id,
-     upvotes: updatedUpvotes,
-     downvotes: updatedDownvotes,
+     userId: userId, // Pass the user ID from localStorage
+     voteType: voteType,
     }),
    });
+
+   if (!response.ok) {
+    // If backend rejects (e.g., they bypassed the UI freeze), revert the UI here if needed
+    console.error("Vote rejected by server");
+   }
   } catch (error) {
    console.error("Failed to save vote to database:", error);
   }
  };
+
+ // Update the UI instantly so the arrow changes color
 
  return (
   <DashboardLayout>
@@ -678,26 +267,68 @@ function Feedback() {
         <label className="block text-[11px] font-black text-slate-500 uppercase tracking-widest">
          Select Enrolled Course
         </label>
-        <select
-         value={courseCode}
-         onChange={(e) => setCourseCode(e.target.value)}
-         className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-bold text-slate-700 appearance-none"
-        >
-         <option value="" disabled>
-          Choose a course...
-         </option>
-         {courseOptions.length > 0 ? (
-          courseOptions.map((course) => (
-           <option key={course} value={course}>
-            {course}
-           </option>
-          ))
-         ) : (
-          <option value="" disabled>
-           No courses found
-          </option>
+
+        {/* --- PASTE THE NEW CODE HERE --- */}
+        <div className="relative text-left w-full mt-2">
+         {/* TRIGGER BUTTON */}
+         <button
+          type="button"
+          onClick={(e) => {
+           e.stopPropagation(); // Prevents the window click listener from immediately closing it
+           setIsDropdownOpen(!isDropdownOpen);
+          }}
+          className={`w-full p-4 bg-white border-2 rounded-xl outline-none transition-all flex justify-between items-center shadow-sm font-bold text-slate-700 ${
+           isDropdownOpen
+            ? "border-indigo-500 ring-4 ring-indigo-50"
+            : "border-slate-200 hover:border-indigo-300"
+          }`}
+         >
+          <span
+           className={
+            courseCode ? "text-slate-800" : "text-slate-400 font-medium"
+           }
+          >
+           {courseCode || "Choose a course..."}
+          </span>
+          <ChevronDown
+           size={20}
+           className={`text-slate-400 transition-transform duration-300 ${
+            isDropdownOpen ? "rotate-180 text-indigo-500" : ""
+           }`}
+          />
+         </button>
+
+         {/* DROPDOWN MENU */}
+         {isDropdownOpen && (
+          <div className="absolute z-50 w-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl shadow-slate-200/50 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-200 py-2">
+           {courseOptions.length > 0 ? (
+            courseOptions.map((course) => (
+             <div
+              key={course}
+              onClick={() => {
+               setCourseCode(course);
+               setIsDropdownOpen(false); // Close menu on select
+              }}
+              className={`px-5 py-3.5 cursor-pointer flex items-center justify-between transition-colors ${
+               courseCode === course
+                ? "bg-indigo-50 text-indigo-700 font-bold"
+                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium"
+              }`}
+             >
+              {course}
+              {courseCode === course && (
+               <Check size={18} className="text-indigo-600" />
+              )}
+             </div>
+            ))
+           ) : (
+            <div className="p-4 text-center text-slate-500 text-sm font-medium">
+             No courses found
+            </div>
+           )}
+          </div>
          )}
-        </select>
+        </div>
 
         <button
          onClick={() => courseCode && setSelected(true)}
@@ -824,10 +455,13 @@ function Feedback() {
               <div className="flex flex-col items-center gap-1 bg-slate-50 rounded-lg p-2 h-fit border border-slate-100 min-w-[50px]">
                <button
                 onClick={() => handleVote(f.id, "up")}
+                disabled={f.userVote !== null && f.userVote !== undefined} // Freeze button if they voted
                 className={`transition-colors p-1 rounded-md ${
                  f.userVote === "up"
-                  ? "text-green-600 bg-green-100"
-                  : "text-slate-400 hover:text-green-600 hover:bg-slate-200"
+                  ? "text-green-600 bg-green-100 cursor-not-allowed opacity-100" // Voted Up (Locked)
+                  : f.userVote === "down"
+                    ? "text-slate-300 cursor-not-allowed opacity-50" // Voted Down (Grey out the Up button)
+                    : "text-slate-400 hover:text-green-600 hover:bg-slate-200" // Has not voted yet
                 }`}
                >
                 <ArrowBigUp
@@ -835,6 +469,7 @@ function Feedback() {
                  className={f.userVote === "up" ? "fill-green-600" : ""}
                 />
                </button>
+
                <span
                 className={`font-black text-sm ${
                  f.userVote === "up"
@@ -846,12 +481,16 @@ function Feedback() {
                >
                 {f.upvotes - f.downvotes}
                </span>
+
                <button
                 onClick={() => handleVote(f.id, "down")}
+                disabled={f.userVote !== null && f.userVote !== undefined} // Freeze button if they voted
                 className={`transition-colors p-1 rounded-md ${
                  f.userVote === "down"
-                  ? "text-red-600 bg-red-100"
-                  : "text-slate-400 hover:text-red-600 hover:bg-slate-200"
+                  ? "text-red-600 bg-red-100 cursor-not-allowed opacity-100" // Voted Down (Locked)
+                  : f.userVote === "up"
+                    ? "text-slate-300 cursor-not-allowed opacity-50" // Voted Up (Grey out the Down button)
+                    : "text-slate-400 hover:text-red-600 hover:bg-slate-200" // Has not voted yet
                 }`}
                >
                 <ArrowBigDown
@@ -860,20 +499,39 @@ function Feedback() {
                 />
                </button>
               </div>
-
               {/* CONTENT COLUMN */}
               <div className="flex-1 space-y-3">
-               <div className="flex justify-between items-start">
-                <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">
-                 Anonymous Student
-                </span>
-               </div>
+               {/* NEW METADATA ROW */}
+               <div className="flex flex-wrap items-center gap-5 text-sm font-semibold text-slate-500 mb-1">
+                {/* Anonymous User Label */}
+                <div className="flex items-center gap-1.5">
+                 <User size={16} className="text-indigo-600" />
+                 <span className="text-indigo-600/90">Anonymous User</span>
+                </div>
 
-               <p className="text-slate-700 text-sm leading-relaxed">
+                {/* Dynamic Timestamp */}
+                <div className="flex items-center gap-1.5">
+                 <Clock size={16} className="text-slate-400" />
+                 <span>
+                  {f.date ? new Date(f.date).toLocaleString() : "Just now"}
+                 </span>
+                </div>
+
+                {/* Professor Replies Count */}
+                <div className="flex items-center gap-1.5">
+                 <MessageCircle size={16} className="text-indigo-500" />
+                 <span className="text-indigo-500/90">
+                  Professor Replies ({f.replies ? f.replies.length : 0})
+                 </span>
+                </div>
+               </div>
+               {/* END METADATA ROW */}
+
+               <p className="text-slate-700 text-sm leading-relaxed mt-2">
                 {f.text}
                </p>
 
-               {/* PROFESSOR REPLIES */}
+               {/* PROFESSOR REPLIES (Existing Code) */}
                {f.replies && f.replies.length > 0 && (
                 <div className="mt-4 space-y-2">
                  {f.replies.map((reply, idx) => (
@@ -903,5 +561,4 @@ function Feedback() {
   </DashboardLayout>
  );
 }
-
 export default Feedback;

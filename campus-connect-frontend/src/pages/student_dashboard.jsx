@@ -103,7 +103,7 @@ function StudentDashboard() {
      {/* Stat Card 1 - MODIFIED TO BE CLICKABLE */}
      <div
       onClick={() => setShowCourses(!showCourses)}
-      className="cursor-pointer bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center gap-5 hover:border-indigo-300 transition-colors group"
+      className="cursor-pointer bg-white rounded-2xl shadow-sm border border-slate-400 p-6 flex items-center gap-5 hover:border-indigo-300 transition-colors group"
      >
       <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
        <BookOpen size={28} />
@@ -120,7 +120,7 @@ function StudentDashboard() {
      </div>
 
      {/* Stat Card 2 */}
-     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center gap-5 hover:border-blue-300 transition-colors group">
+     <div className="bg-white rounded-2xl shadow-sm border border-slate-400 p-6 flex items-center gap-5 hover:border-blue-300 transition-colors group">
       <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
        <Briefcase size={28} />
       </div>
@@ -133,7 +133,7 @@ function StudentDashboard() {
      </div>
 
      {/* Stat Card 3 */}
-     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex items-center gap-5 hover:border-orange-300 transition-colors group">
+     <div className="bg-white rounded-2xl shadow-sm border border-slate-400 p-6 flex items-center gap-5 hover:border-orange-300 transition-colors group">
       <div className="w-14 h-14 bg-orange-50 text-orange-600 rounded-xl flex items-center justify-center group-hover:bg-orange-500 group-hover:text-white transition-colors">
        <MessageSquareWarning size={28} />
       </div>
@@ -160,9 +160,9 @@ function StudentDashboard() {
         courses.map((course, index) => (
          <div
           key={index}
-          className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3"
+          className="p-4 bg-slate-50 rounded-xl border border-slate-400 flex items-center gap-3"
          >
-          <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+          <div className="w-2 h-2 rounded-full bg-indigo-500 "></div>
           <span className="font-bold text-slate-700 text-sm">{course}</span>
          </div>
         ))
@@ -178,7 +178,7 @@ function StudentDashboard() {
     {/* BOTTOM TWO COLUMNS */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
      {/* RECENT APPLICATIONS */}
-     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+     <div className="bg-white rounded-2xl shadow-sm border border-slate-400 overflow-hidden flex flex-col">
       <div className="p-6 border-b border-slate-100 flex justify-between items-center">
        <h3 className="text-lg font-bold text-slate-800">Recent Applications</h3>
        <button className="text-sm font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
@@ -189,7 +189,7 @@ function StudentDashboard() {
        {appHistory.map((app) => (
         <div
          key={app.id}
-         className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors"
+         className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-300 hover:border-slate-400 transition-colors"
         >
          <div>
           <h4 className="font-bold text-slate-800 text-sm">{app.title}</h4>
@@ -214,7 +214,7 @@ function StudentDashboard() {
      </div>
 
      {/* PENDING ACTION: FEEDBACK */}
-     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+     <div className="bg-white rounded-2xl shadow-sm border border-slate-400 overflow-hidden flex flex-col">
       <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-orange-50/30">
        <div className="flex items-center gap-2">
         <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></div>

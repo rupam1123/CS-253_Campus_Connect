@@ -365,7 +365,7 @@ function ProfessorDashboard() {
    <div className="p-6 bg-slate-50 min-h-screen">
     <header className="mb-8">
      <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-      Professor Analytics
+      Course Analytics
      </h2>
      <p className="text-slate-500">
       Real-time student feedback and performance metrics.
