@@ -6,16 +6,10 @@ require("dotenv").config();
 
 // create a database connection using values stored in .env
 const db = mysql.createConnection({
- // MySQL server location
  host: process.env.DB_HOST,
-
- // MySQL username
+ port: process.env.DB_PORT, // 🔥 IMPORTANT
  user: process.env.DB_USER,
-
- // MySQL password
  password: process.env.DB_PASSWORD,
-
- // database name we created earlier
  database: process.env.DB_NAME,
 });
 
