@@ -23,9 +23,14 @@ const app = express();
 
 /* VERY IMPORTANT: put CORS BEFORE routes */
 
+const cors = require("cors");
+
 app.use(
  cors({
-  origin: "http://localhost:5173",
+  origin: [
+   "http://localhost:5173",
+   "https://campusconnect-green-pi.vercel.app",
+  ],
   credentials: true,
  }),
 );
