@@ -21,10 +21,6 @@ dotenv.config();
 
 const app = express();
 
-/* VERY IMPORTANT: put CORS BEFORE routes */
-
-const cors = require("cors");
-
 app.use(
  cors({
   origin: [
