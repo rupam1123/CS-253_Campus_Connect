@@ -7,22 +7,19 @@ require("dotenv").config();
 // create a database connection using values stored in .env
 const db = mysql.createConnection({
  host: process.env.DB_HOST,
- port: process.env.DB_PORT, // 🔥 IMPORTANT
+ port: process.env.DB_PORT,
  user: process.env.DB_USER,
  password: process.env.DB_PASSWORD,
  database: process.env.DB_NAME,
+ ssl: {
+  rejectUnauthorized: false, // REQUIRED for Aiven
+ },
 });
-
-// attempt to connect to MySQL
 db.connect((err) => {
- // if connection fails
  if (err) {
-  console.log("Database connection failed", err);
- }
-
- // if connection successful
- else {
-  console.log("MySQL Connected");
+  console.error("❌ DB Connection Failed:", err);
+ } else {
+  console.log("✅ Connected to Aiven MySQL");
  }
 });
 
