@@ -1,171 +1,207 @@
-import axios from "axios";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
- GraduationCap,
- Mail,
- Lock,
  ArrowRight,
- User,
  BookOpen,
- X,
+ Eye,
+ EyeOff,
+ GraduationCap,
  KeyRound,
+ Lock,
+ Mail,
+ User,
+ X,
 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import { fetchJson, getErrorMessage } from "../lib/api.js";
+import {
+ clearSession,
+ getDefaultDashboardPath,
+ persistSession,
+} from "../lib/session.js";
+
+const EMPTY_OTP = new Array(6).fill("");
 
 function Login() {
  const navigate = useNavigate();
-
- // ======================
- // LOGIN STATES
- // ======================
  const [role, setRole] = useState("student");
  const [email, setEmail] = useState("");
  const [password, setPassword] = useState("");
  const [showPassword, setShowPassword] = useState(false);
+ const [isSubmitting, setIsSubmitting] = useState(false);
 
- // ======================
- // FORGOT PASSWORD STATES
- // ======================
  const [showForgotModal, setShowForgotModal] = useState(false);
- const [forgotStep, setForgotStep] = useState(1); // 1 = Email, 2 = OTP & New Password
+ const [forgotStep, setForgotStep] = useState(1);
  const [resetEmail, setResetEmail] = useState("");
- const [resetOtp, setResetOtp] = useState(new Array(6).fill(""));
+ const [resetOtp, setResetOtp] = useState(EMPTY_OTP);
  const [newPassword, setNewPassword] = useState("");
  const [resetTimer, setResetTimer] = useState(120);
+ const [isSendingOtp, setIsSendingOtp] = useState(false);
+ const [isResettingPassword, setIsResettingPassword] = useState(false);
 
- // ======================
- // OTP TIMER EFFECT
- // ======================
  useEffect(() => {
-  let interval;
-  if (showForgotModal && forgotStep === 2 && resetTimer > 0) {
-   interval = setInterval(() => setResetTimer((prev) => prev - 1), 1000);
-  } else if (resetTimer === 0) {
-   clearInterval(interval);
+  if (!showForgotModal || forgotStep !== 2 || resetTimer <= 0) {
+   return undefined;
   }
-  return () => clearInterval(interval);
- }, [showForgotModal, forgotStep, resetTimer]);
+
+  const interval = window.setInterval(() => {
+   setResetTimer((current) => (current > 0 ? current - 1 : 0));
+  }, 1000);
+
+  return () => window.clearInterval(interval);
+ }, [forgotStep, resetTimer, showForgotModal]);
+
+ const handleForgotModalClose = () => {
+  setShowForgotModal(false);
+  setForgotStep(1);
+  setResetOtp(EMPTY_OTP);
+  setNewPassword("");
+  setResetTimer(120);
+ };
 
  const handleForgotOtpChange = (element, index) => {
-  if (isNaN(element.value)) return false;
-  setResetOtp([
-   ...resetOtp.map((d, idx) => (idx === index ? element.value : d)),
-  ]);
-  if (element.nextSibling && element.value !== "") {
+  if (!/^\d?$/.test(element.value)) {
+   return;
+  }
+
+  setResetOtp((current) =>
+   current.map((digit, currentIndex) =>
+    currentIndex === index ? element.value : digit,
+   ),
+  );
+
+  if (element.value && element.nextSibling instanceof HTMLInputElement) {
    element.nextSibling.focus();
   }
  };
 
  const formatResetTime = () => {
-  const m = Math.floor(resetTimer / 60);
-  const s = resetTimer % 60;
-  return `${m}:${s < 10 ? "0" : ""}${s}`;
- };
-
- // ======================
- // HANDLERS
- // ======================
- const handleLogin = async (e) => {
-  e.preventDefault();
-
-  if (!email || !password) {
-   toast.error("Please enter email and password");
-   return;
-  }
-
-  const toastId = toast.loading("Logging in...");
-
-  try {
-   const res = await axios.post("http://localhost:5001/api/auth/login", {
-    email,
-    password,
-   });
-
-   localStorage.setItem("token", res.data.token);
-   //console.log("Login successful, received token:", res.data.token);
-   localStorage.setItem("user", JSON.stringify(res.data.user));
-   const user = JSON.parse(localStorage.getItem("user"));
-   console.log("Stored user in localStorage:", user.id, user.email, user.role);
-   toast.success("Login successful! Redirecting...", { id: toastId });
-   //save role in local storage
-   localStorage.setItem("role", res.data.user.role);
-
-   if (res.data.user.role === "student") {
-    navigate("/student-dashboard");
-   } else {
-    navigate("/professor-dashboard");
-   }
-  } catch (err) {
-   toast.error(err.response?.data?.message || "Login failed", { id: toastId });
-  }
- };
-
- const handleSendResetOtp = async (e) => {
-  e.preventDefault();
-  if (!resetEmail) return toast.error("Please enter your email");
-
-  const toastId = toast.loading("Sending OTP...");
-  try {
-   await axios.post("http://localhost:5001/api/auth/send-reset-otp", {
-    email: resetEmail,
-   });
-   toast.success("OTP sent to your email!", { id: toastId });
-   setForgotStep(2);
-   setResetTimer(120);
-  } catch (err) {
-   toast.error(err.response?.data?.message || "Error sending OTP", {
-    id: toastId,
-   });
-  }
- };
-
- const handleResetPassword = async (e) => {
-  e.preventDefault();
-  const enteredOtp = resetOtp.join("");
-  if (enteredOtp.length !== 6)
-   return toast.error("Please enter the full 6-digit OTP");
-  if (newPassword.length < 6)
-   return toast.error("Password must be at least 6 characters");
-
-  const toastId = toast.loading("Resetting password...");
-  try {
-   await axios.post("http://localhost:5001/api/auth/reset-password", {
-    email: resetEmail,
-    otp: enteredOtp,
-    newPassword: newPassword,
-   });
-
-   toast.success("Password reset successfully! You can now log in.", {
-    id: toastId,
-   });
-
-   // Cleanup & Close Modal
-   setShowForgotModal(false);
-   setForgotStep(1);
-   setResetEmail("");
-   setResetOtp(new Array(6).fill(""));
-   setNewPassword("");
-  } catch (err) {
-   toast.error(err.response?.data?.message || "Failed to reset password", {
-    id: toastId,
-   });
-  }
+  const minutes = Math.floor(resetTimer / 60);
+  const seconds = resetTimer % 60;
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
  };
 
  const calculateStrength = (pass) => {
   let score = 0;
-  if (pass.length > 5) score += 1;
-  if (pass.length > 8) score += 1;
-  if (/[A-Z]/.test(pass) && /[0-9]/.test(pass)) score += 1;
+
+  if (pass.length >= 8) score += 1;
+  if (/[A-Z]/.test(pass)) score += 1;
+  if (/[0-9]/.test(pass)) score += 1;
+
   return score;
  };
 
  const strengthScore = calculateStrength(password);
 
+ const handleLogin = async (event) => {
+  event.preventDefault();
+
+  if (!email || !password) {
+   toast.error("Please enter both your email and password.");
+   return;
+  }
+
+  setIsSubmitting(true);
+  const toastId = toast.loading("Signing you in...");
+
+  try {
+   const data = await fetchJson("/api/auth/login", {
+    method: "POST",
+    body: { email, password },
+   });
+   const actualRole = (data?.user?.role || "").toLowerCase();
+
+   if (actualRole && actualRole !== role) {
+    toast.error(
+     `This account is registered as a ${actualRole}. Switch the role tab and try again.`,
+     { id: toastId },
+    );
+    return;
+   }
+
+   clearSession();
+   persistSession({ token: data.token, user: data.user });
+   toast.success("Login successful. Redirecting...", { id: toastId });
+   navigate(getDefaultDashboardPath(actualRole), { replace: true });
+  } catch (error) {
+   toast.error(getErrorMessage(error, "Login failed."), { id: toastId });
+  } finally {
+   setIsSubmitting(false);
+  }
+ };
+
+ const handleSendResetOtp = async (event) => {
+  event.preventDefault();
+
+  if (!resetEmail) {
+   toast.error("Please enter the email linked to your account.");
+   return;
+  }
+
+  setIsSendingOtp(true);
+  const toastId = toast.loading("Sending your verification code...");
+
+  try {
+   await fetchJson("/api/auth/send-reset-otp", {
+    method: "POST",
+    body: { email: resetEmail },
+   });
+   setForgotStep(2);
+   setResetOtp(EMPTY_OTP);
+   setResetTimer(120);
+   toast.success("A reset OTP has been sent to your inbox.", { id: toastId });
+  } catch (error) {
+   toast.error(getErrorMessage(error, "Unable to send OTP."), {
+    id: toastId,
+   });
+  } finally {
+   setIsSendingOtp(false);
+  }
+ };
+
+ const handleResetPassword = async (event) => {
+  event.preventDefault();
+
+  const enteredOtp = resetOtp.join("");
+
+  if (enteredOtp.length !== 6) {
+   toast.error("Please enter the full 6-digit OTP.");
+   return;
+  }
+
+  if (calculateStrength(newPassword) < 3) {
+   toast.error(
+    "Use at least 8 characters, one uppercase letter, and one number.",
+   );
+   return;
+  }
+
+  setIsResettingPassword(true);
+  const toastId = toast.loading("Resetting your password...");
+
+  try {
+   await fetchJson("/api/auth/reset-password", {
+    method: "POST",
+    body: {
+     email: resetEmail,
+     otp: enteredOtp,
+     newPassword,
+    },
+   });
+
+   toast.success("Password updated. You can sign in now.", { id: toastId });
+   handleForgotModalClose();
+  } catch (error) {
+   toast.error(getErrorMessage(error, "Unable to reset password."), {
+    id: toastId,
+   });
+  } finally {
+   setIsResettingPassword(false);
+  }
+ };
+
  return (
-  <div className="min-h-screen flex bg-white font-sans relative">
-   {/* --- FANCY GLASSMORPHISM TOAST ALERTS --- */}
+  <div className="h-screen overflow-hidden bg-app-shell">
    <Toaster
     position="top-right"
     reverseOrder={false}
@@ -181,331 +217,360 @@ function Login() {
       padding: "16px 24px",
      },
      success: {
-      style: { background: "rgba(16, 185, 129, 0.85)" },
+      style: { background: "rgba(16, 185, 129, 0.88)" },
       iconTheme: { primary: "#fff", secondary: "#10b981" },
      },
      error: {
-      style: { background: "rgba(239, 68, 68, 0.85)" },
+      style: { background: "rgba(239, 68, 68, 0.88)" },
       iconTheme: { primary: "#fff", secondary: "#ef4444" },
      },
     }}
    />
 
-   {/* LEFT COLUMN - BRANDING */}
-   <div className="hidden lg:flex lg:w-1/2 relative bg-slate-900 overflow-hidden">
-    <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-20 pointer-events-none">
-     <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-indigo-600 blur-3xl"></div>
-     <div className="absolute bottom-10 right-10 w-[500px] h-[500px] rounded-full bg-blue-600 blur-3xl"></div>
-    </div>
+   <div className="mx-auto flex h-full max-w-[1600px] overflow-hidden">
+    <div className="hidden w-1/2 p-6 lg:flex">
+     <div className="relative flex w-full flex-col overflow-hidden rounded-[32px] bg-slate-950 px-12 py-14 text-white shadow-[0_32px_100px_rgba(15,23,42,0.28)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.35),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(20,184,166,0.28),_transparent_34%)]" />
 
-    <div className="relative z-10 flex flex-col justify-between p-16 w-full h-full">
-     <div className="flex items-center gap-3">
-      <div className="p-2.5 bg-indigo-600 rounded-xl text-white shadow-lg shadow-indigo-500/30">
-       <GraduationCap size={32} strokeWidth={2.5} />
-      </div>
-      <span className="text-3xl font-black text-white tracking-tight">
-       Campus<span className="text-indigo-400">Connect</span>
-      </span>
-     </div>
-
-     <div className="space-y-6 max-w-lg mt-20">
-      <h1 className="text-5xl font-extrabold text-white leading-tight">
-       Empowering the <span className="text-indigo-400">academic</span>{" "}
-       community.
-      </h1>
-      <p className="text-lg text-slate-400 leading-relaxed font-medium">
-       Join thousands of students and professors collaborating on cutting-edge
-       projects, discussing coursework, and shaping the future of education.
-      </p>
-     </div>
-
-     <div className="flex items-center gap-4 mt-auto pt-10">
-      <div className="flex -space-x-4">
-       <img
-        className="w-12 h-12 rounded-full border-4 border-slate-900"
-        src="https://ui-avatars.com/api/?name=Alex&background=4f46e5&color=fff"
-        alt="User"
-       />
-       <img
-        className="w-12 h-12 rounded-full border-4 border-slate-900"
-        src="https://ui-avatars.com/api/?name=Sarah&background=10b981&color=fff"
-        alt="User"
-       />
-       <img
-        className="w-12 h-12 rounded-full border-4 border-slate-900"
-        src="https://ui-avatars.com/api/?name=David&background=f59e0b&color=fff"
-        alt="User"
-       />
-      </div>
-      <div className="text-sm font-bold text-slate-300">
-       Join <span className="text-white">5,000+</span> active members
-      </div>
-     </div>
-    </div>
-   </div>
-
-   {/* RIGHT COLUMN - LOGIN FORM */}
-   <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-8 sm:p-12 lg:p-24 bg-slate-50 relative">
-    <div className="w-full max-w-md space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-     <div className="text-center lg:text-left">
-      <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-       Welcome back
-      </h2>
-      <p className="text-slate-500 mt-2 font-medium">
-       Please enter your details to sign in.
-      </p>
-     </div>
-
-     {/* ROLE SELECTOR */}
-     <div className="bg-slate-200/50 p-1 rounded-xl flex">
-      <button
-       type="button"
-       onClick={() => setRole("Student")}
-       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${
-        role === "Student"
-         ? "bg-white text-indigo-600 shadow-sm"
-         : "text-slate-500 hover:text-slate-700"
-       }`}
-      >
-       <User size={18} /> Student
-      </button>
-      <button
-       type="button"
-       onClick={() => setRole("Professor")}
-       className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold rounded-lg transition-all ${
-        role === "Professor"
-         ? "bg-white text-indigo-600 shadow-sm"
-         : "text-slate-500 hover:text-slate-700"
-       }`}
-      >
-       <BookOpen size={18} /> Professor
-      </button>
-     </div>
-
-     {/* MAIN LOGIN FORM */}
-     <form onSubmit={handleLogin} className="space-y-6">
-      <div>
-       <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">
-        Email Address
-       </label>
-       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-         <Mail size={18} />
-        </div>
-        <input
-         type="email"
-         required
-         value={email}
-         onChange={(e) => setEmail(e.target.value)}
-         placeholder="username@iitk.ac.in"
-         className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
-        />
+      <div className="relative flex items-center gap-3">
+       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-teal-400 text-slate-950 shadow-lg shadow-cyan-500/30">
+        <GraduationCap size={30} strokeWidth={2.5} />
+       </div>
+       <div>
+        <p className="text-3xl font-black tracking-tight">CampusConnect</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.28em] text-cyan-100/80">
+         Academic Collaboration
+        </p>
        </div>
       </div>
 
-      <div>
-       <div className="flex justify-between items-center mb-2">
-        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
-         Password
+      <div className="relative mt-24 max-w-xl space-y-8">
+       <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.24em] text-cyan-100">
+        <KeyRound size={14} />
+        Secure Access
+       </div>
+       <h1 className="text-5xl font-black leading-tight">
+        One portal for projects, feedback, and campus-wide discussion.
+       </h1>
+       <p className="text-lg leading-8 text-slate-300">
+        CampusConnect keeps the student and professor workflow in sync with
+        faster project discovery, cleaner course feedback, and a more reliable
+        collaboration loop.
+       </p>
+      </div>
+
+      <div className="relative mt-auto grid grid-cols-3 gap-4 pt-16">
+       {[
+        { label: "Live Projects", value: "120+" },
+        { label: "Feedback Threads", value: "1.8K" },
+        { label: "Campus Members", value: "5K+" },
+       ].map((item) => (
+        <div
+         key={item.label}
+         className="rounded-3xl border border-white/10 bg-white/8 px-5 py-4 backdrop-blur"
+        >
+         <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          {item.label}
+         </p>
+         <p className="mt-3 text-3xl font-black text-white">{item.value}</p>
+        </div>
+       ))}
+      </div>
+     </div>
+    </div>
+
+    <div className="flex min-h-0 w-full items-center justify-center px-4 py-4 sm:px-6 lg:w-1/2 lg:px-10 lg:py-6">
+     <div className="glass-panel flex max-h-[calc(100svh-1.5rem)] w-full max-w-xl flex-col overflow-hidden rounded-[32px] px-6 py-6 sm:px-10 sm:py-8">
+      <div className="scrollbar-none min-h-0 overflow-y-auto pr-1">
+      <div className="lg:hidden">
+       <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 to-teal-500 text-white">
+         <GraduationCap size={26} strokeWidth={2.5} />
+        </div>
+        <div>
+         <p className="text-2xl font-black text-slate-900">CampusConnect</p>
+         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
+          Academic Collaboration
+         </p>
+        </div>
+       </div>
+      </div>
+
+      <div className="mt-8 space-y-2 lg:mt-0">
+       <p className="text-sm font-bold uppercase tracking-[0.24em] text-sky-600">
+        Welcome Back
+       </p>
+       <h2 className="text-4xl font-black tracking-tight text-slate-900">
+        Sign in to your workspace
+       </h2>
+       <p className="text-base leading-7 text-slate-500">
+        Choose your role, enter your credentials, and pick up right where you
+        left off.
+       </p>
+      </div>
+
+      <div className="mt-8 rounded-2xl bg-slate-100/80 p-1.5">
+       <div className="grid grid-cols-2 gap-2">
+        <button
+         type="button"
+         onClick={() => setRole("student")}
+         className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+          role === "student"
+           ? "bg-white text-sky-600 shadow-sm"
+           : "text-slate-500 hover:text-slate-700"
+         }`}
+        >
+         <User size={18} />
+         Student
+        </button>
+        <button
+         type="button"
+         onClick={() => setRole("professor")}
+         className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold transition ${
+          role === "professor"
+           ? "bg-white text-sky-600 shadow-sm"
+           : "text-slate-500 hover:text-slate-700"
+         }`}
+        >
+         <BookOpen size={18} />
+         Professor
+        </button>
+       </div>
+      </div>
+
+      <form onSubmit={handleLogin} className="mt-8 space-y-6">
+       <div>
+        <label className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-slate-500">
+         Email Address
         </label>
-        <button
-         type="button"
-         onClick={() => {
-          setShowForgotModal(true);
-          setForgotStep(1);
-          setResetEmail(email); // Autofill email if they typed it
-         }}
-         className="text-sm font-bold text-indigo-600 hover:text-indigo-500 focus:outline-none"
-        >
-         Forgot password?
-        </button>
+        <div className="relative">
+         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+          <Mail size={18} />
+         </div>
+         <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="username@iitk.ac.in"
+          className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 pl-11 font-medium text-slate-700 outline-none transition focus:border-sky-500"
+         />
+        </div>
        </div>
 
-       <div className="relative group overflow-hidden rounded-xl">
-        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-         <Lock size={18} />
+       <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+         <label className="block text-xs font-black uppercase tracking-[0.22em] text-slate-500">
+          Password
+         </label>
+         <button
+          type="button"
+          onClick={() => {
+           setShowForgotModal(true);
+           setForgotStep(1);
+           setResetEmail(email);
+          }}
+          className="text-sm font-bold text-sky-600 hover:text-sky-700"
+         >
+          Forgot password?
+         </button>
         </div>
 
-        <input
-         type={showPassword ? "text" : "password"}
-         required
-         value={password}
-         onChange={(e) => setPassword(e.target.value)}
-         placeholder="Hide it from your roommate !!"
-         className="w-full pl-11 pr-12 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700 pb-4"
-        />
-
-        <button
-         type="button"
-         onClick={() => setShowPassword(!showPassword)}
-         className="absolute inset-y-0 right-0 pr-3 flex items-center text-2xl hover:scale-110 transition-transform focus:outline-none pb-1"
-         title={showPassword ? "Hide password" : "Show password"}
-        >
-         {showPassword ? "🐵" : "🙈"}
-        </button>
-
-        {/* STRENGTH BAR */}
-        {password.length > 0 && (
-         <div className="absolute bottom-0 left-0 h-1 bg-slate-100 w-full rounded-b-xl flex">
-          <div
-           className={`h-full transition-all duration-300 ${
-            strengthScore === 0
-             ? "w-1/3 bg-red-500"
-             : strengthScore === 1
-               ? "w-1/3 bg-red-500"
-               : strengthScore === 2
-                 ? "w-2/3 bg-yellow-500"
-                 : "w-full bg-green-500"
-           }`}
-          ></div>
+        <div className="relative overflow-hidden rounded-2xl">
+         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+          <Lock size={18} />
          </div>
-        )}
+         <input
+          type={showPassword ? "text" : "password"}
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="Enter your password"
+          className="w-full rounded-2xl border-2 border-slate-200 bg-white px-4 py-4 pb-5 pl-11 pr-12 font-medium text-slate-700 outline-none transition focus:border-sky-500"
+         />
+         <button
+          type="button"
+          onClick={() => setShowPassword((current) => !current)}
+          className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-500 transition hover:text-sky-600"
+          title={showPassword ? "Hide password" : "Show password"}
+         >
+          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+         </button>
+
+         {password.length > 0 && (
+          <div className="absolute bottom-0 left-0 flex h-1 w-full rounded-b-2xl bg-slate-100">
+           <div
+            className={`h-full transition-all ${
+             strengthScore <= 1
+              ? "w-1/3 bg-rose-500"
+              : strengthScore === 2
+               ? "w-2/3 bg-amber-400"
+               : "w-full bg-emerald-500"
+            }`}
+           />
+          </div>
+         )}
+        </div>
        </div>
+
+       <button
+        type="submit"
+        disabled={isSubmitting}
+        className="group flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-4 text-base font-bold text-white shadow-lg shadow-slate-950/10 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+       >
+        {isSubmitting ? "Signing In..." : "Sign In to Dashboard"}
+        <ArrowRight
+         size={18}
+         className="transition-transform group-hover:translate-x-1"
+        />
+       </button>
+      </form>
+
+      <p className="mt-8 text-center text-slate-500">
+        Don&apos;t have an account?{" "}
+        <Link
+         to="/signup"
+         className="font-bold text-sky-600 transition hover:text-sky-700 hover:underline"
+        >
+         Create one now
+        </Link>
+      </p>
       </div>
-
-      <button
-       type="submit"
-       className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 group mt-2"
-      >
-       Sign In to Dashboard
-       <ArrowRight
-        size={18}
-        className="group-hover:translate-x-1 transition-transform"
-       />
-      </button>
-     </form>
-
-     <p className="text-center text-slate-500 font-medium">
-      Don't have an account?{" "}
-      <Link to="/signup" className="text-indigo-600 font-bold hover:underline">
-       Sign up for free
-      </Link>
-     </p>
+     </div>
     </div>
    </div>
 
-   {/* ========================================= */}
-   {/* FORGOT PASSWORD MODAL */}
-   {/* ========================================= */}
    {showForgotModal && (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-     <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl relative animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+     <div className="relative w-full max-w-md rounded-[28px] bg-white p-8 shadow-[0_32px_100px_rgba(15,23,42,0.24)]">
       <button
-       onClick={() => setShowForgotModal(false)}
-       className="absolute top-4 right-4 text-slate-400 hover:text-slate-700 bg-slate-100 p-2 rounded-full transition-colors"
+       type="button"
+       onClick={handleForgotModalClose}
+       className="absolute right-4 top-4 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-700"
       >
-       <X size={20} />
+       <X size={18} />
       </button>
 
       {forgotStep === 1 ? (
-       // STEP 1: ENTER EMAIL
        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="text-center mb-8">
-         <div className="mx-auto w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-          <KeyRound size={32} />
+        <div className="mb-8 text-center">
+         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+          <KeyRound size={30} />
          </div>
-         <h3 className="text-2xl font-black text-slate-900">Reset Password</h3>
-         <p className="text-slate-500 font-medium mt-2">
-          Enter your email and we'll send you a verification code.
+         <h3 className="mt-4 text-2xl font-black text-slate-900">
+          Reset your password
+         </h3>
+         <p className="mt-2 text-slate-500">
+          We&apos;ll send a one-time verification code to your email address.
          </p>
         </div>
 
-        <form onSubmit={handleSendResetOtp}>
-         <div className="mb-6">
-          <div className="relative">
-           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-            <Mail size={18} />
-           </div>
-           <input
-            type="email"
-            required
-            value={resetEmail}
-            onChange={(e) => setResetEmail(e.target.value)}
-            placeholder="Enter your email"
-            className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
-           />
+        <form onSubmit={handleSendResetOtp} className="space-y-6">
+         <div className="relative">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+           <Mail size={18} />
           </div>
+          <input
+           type="email"
+           required
+           value={resetEmail}
+           onChange={(event) => setResetEmail(event.target.value)}
+           placeholder="Enter your email"
+           className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-4 pl-11 font-medium text-slate-700 outline-none transition focus:border-sky-500 focus:bg-white"
+          />
          </div>
+
          <button
           type="submit"
-          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-200"
+          disabled={isSendingOtp}
+          className="w-full rounded-2xl bg-sky-600 px-4 py-4 font-bold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
          >
-          Send Reset Link
+          {isSendingOtp ? "Sending OTP..." : "Send Verification Code"}
          </button>
         </form>
        </div>
       ) : (
-       // STEP 2: ENTER OTP & NEW PASSWORD
        <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-        <div className="text-center mb-8">
-         <div className="mx-auto w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4">
-          <Mail size={32} />
+        <div className="mb-8 text-center">
+         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-sky-100 text-sky-600">
+          <Mail size={30} />
          </div>
-         <h3 className="text-2xl font-black text-slate-900">
-          Check your email
+         <h3 className="mt-4 text-2xl font-black text-slate-900">
+          Check your inbox
          </h3>
-         <p className="text-slate-500 font-medium mt-2">
-          Enter the 6-digit code sent to <br />
-          <span className="text-slate-900 font-bold">{resetEmail}</span>
+         <p className="mt-2 text-slate-500">
+          Enter the 6-digit OTP sent to{" "}
+          <span className="font-bold text-slate-900">{resetEmail}</span>.
          </p>
         </div>
 
         <form onSubmit={handleResetPassword}>
-         {/* OTP INPUTS */}
-         <div className="flex justify-center gap-2 mb-6">
-          {resetOtp.map((data, index) => (
+         <div className="mb-6 flex justify-center gap-2">
+          {resetOtp.map((digit, index) => (
            <input
             key={index}
             type="text"
+            inputMode="numeric"
             maxLength="1"
-            value={data}
-            onChange={(e) => handleForgotOtpChange(e.target, index)}
-            onFocus={(e) => e.target.select()}
-            className="w-12 h-14 text-center text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+            value={digit}
+            onChange={(event) =>
+             handleForgotOtpChange(event.target, index)
+            }
+            onFocus={(event) => event.target.select()}
+            className="h-14 w-12 rounded-2xl border-2 border-slate-200 bg-slate-50 text-center text-2xl font-black text-slate-900 outline-none transition focus:border-sky-500 focus:bg-white"
            />
           ))}
          </div>
 
-         {/* NEW PASSWORD INPUT */}
          <div className="mb-8">
-          <div className="relative group overflow-hidden rounded-xl">
-           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+          <div className="relative">
+           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
             <Lock size={18} />
            </div>
            <input
             type="password"
             required
+            autoComplete="new-password"
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Enter new password"
-            className="w-full pl-11 pr-4 py-3.5 bg-white border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-all font-medium text-slate-700"
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder="Create a stronger password"
+            className="w-full rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-4 pl-11 font-medium text-slate-700 outline-none transition focus:border-sky-500 focus:bg-white"
            />
           </div>
+          <p className="mt-2 text-xs text-slate-400">
+           Use at least 8 characters, one uppercase letter, and one number.
+          </p>
          </div>
 
          <button
           type="submit"
-          disabled={resetOtp.join("").length !== 6 || newPassword.length < 6}
-          className="w-full bg-slate-900 disabled:bg-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-bold transition-all shadow-lg hover:bg-slate-800"
+          disabled={
+           resetOtp.join("").length !== 6 || isResettingPassword
+          }
+          className="w-full rounded-2xl bg-slate-950 px-4 py-4 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
          >
-          Set New Password
+          {isResettingPassword ? "Updating Password..." : "Set New Password"}
          </button>
         </form>
 
         <div className="mt-6 text-center">
-         <p className="text-sm font-bold text-slate-500 mb-2">
+         <p className="text-sm font-bold text-slate-500">
           Time remaining:{" "}
-          <span className="text-indigo-600 font-black">
-           {formatResetTime()}
-          </span>
+          <span className="text-sky-600">{formatResetTime()}</span>
          </p>
          <button
           type="button"
           onClick={handleSendResetOtp}
-          disabled={resetTimer > 0}
-          className={`text-sm font-bold transition-colors ${resetTimer > 0 ? "text-slate-400 cursor-not-allowed" : "text-indigo-600 hover:text-indigo-800 underline"}`}
+          disabled={resetTimer > 0 || isSendingOtp}
+          className={`mt-2 text-sm font-bold transition ${
+           resetTimer > 0
+            ? "cursor-not-allowed text-slate-400"
+            : "text-sky-600 hover:text-sky-700"
+          }`}
          >
-          Didn't receive code? Resend
+          Didn&apos;t receive the code? Resend OTP
          </button>
         </div>
        </div>

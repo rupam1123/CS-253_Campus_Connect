@@ -1,8 +1,3 @@
-// ======================
-// IMPORT DB
-// ======================
-// const db = require("./config/db");
-
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -20,17 +15,50 @@ const professorRoutes = require("./routes/professorRoutes.js");
 dotenv.config();
 
 const app = express();
+const port = Number(process.env.PORT) || 5001;
+const allowedOrigins = (
+ process.env.CLIENT_URLS || "http://localhost:5173,http://localhost:4173"
+)
+ .split(",")
+ .map((origin) => origin.trim())
+ .filter(Boolean);
 
-/* VERY IMPORTANT: put CORS BEFORE routes */
+const isAllowedOrigin = (origin) => {
+ if (!origin) {
+  return true;
+ }
+
+ if (allowedOrigins.includes(origin)) {
+  return true;
+ }
+
+ try {
+  const parsedOrigin = new URL(origin);
+  return parsedOrigin.hostname.endsWith(".vercel.app");
+ } catch (error) {
+  return false;
+ }
+};
 
 app.use(
  cors({
-  origin: "http://localhost:5173",
+  origin(origin, callback) {
+   if (isAllowedOrigin(origin)) {
+    callback(null, true);
+    return;
+   }
+
+   callback(new Error("CORS origin not allowed"));
+  },
   credentials: true,
  }),
 );
 
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
+
+app.get("/api/health", (_req, res) => {
+ res.status(200).json({ status: "ok" });
+});
 
 app.use("/api/applications", applicationRoutes);
 app.use("/api/projects", projectRoutes);
@@ -41,6 +69,19 @@ app.use("/api/courses", coursesRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/professor", professorRoutes);
 
-app.listen(process.env.PORT, () => {
- console.log(`Server running on port ${process.env.PORT}`);
+app.use((_req, res) => {
+ res.status(404).json({ message: "Route not found." });
 });
+
+app.use((err, _req, res, _next) => {
+ console.error("Unhandled server error:", err);
+ res.status(500).json({ message: "Internal server error." });
+});
+
+if (require.main === module) {
+ app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+ });
+}
+
+module.exports = app;

@@ -1,54 +1,64 @@
 const db = require("../config/db");
 
-// ================= CREATE POST =================
+const normalizeText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const getAuthorAlias = (value, fallback = "Anonymous User") =>
+ normalizeText(value) || fallback;
+
 exports.createpost = async (req, res) => {
  try {
-  const { title, content, tag } = req.body;
+  const title = normalizeText(req.body.title);
+  const content = normalizeText(req.body.content);
+  const tag = normalizeText(req.body.tag);
+  const authorId = Number.parseInt(req.body.userId, 10) || null;
+  const authorAlias = getAuthorAlias(req.body.authorAlias);
 
-  // 1. Catch the 'result' array from the database query
-  const [result] = await db
-   .promise()
-   .query("INSERT INTO forum_posts (title, content, tag) VALUES (?, ?, ?)", [
-    title,
-    content,
-    tag,
-   ]);
+  if (!title || !content || !tag) {
+   return res
+    .status(400)
+    .json({ message: "Title, content, and tag are required." });
+  }
 
-  // 2. Send back the newly created post data, including the vital insertId
+  const [result] = await db.promise().query(
+   `INSERT INTO forum_posts (title, content, tag, author_id, author_alias)
+    VALUES (?, ?, ?, ?, ?)`,
+   [title, content, tag, authorId, authorAlias],
+  );
+
   res.json({
    id: result.insertId,
-   title: title,
-   content: content,
-   tag: tag,
+   title,
+   content,
+   tag,
+   author_alias: authorAlias,
    upvotes: 0,
    downvotes: 0,
    comments: 0,
   });
  } catch (err) {
   console.error("Create Post Error:", err);
-  res.status(500).json(err);
+  res.status(500).json({ message: "Unable to create the post right now." });
  }
 };
 
-// ================= GET POSTS =================
 exports.getpost = async (req, res) => {
  try {
-  // Grab the userId from the URL query (e.g., ?userId=rupamd23)
   const userId = req.query.userId || null;
 
   const [rows] = await db.promise().query(
    `
-   SELECT 
-    p.*, 
+   SELECT
+    p.*,
+    COALESCE(NULLIF(p.author_alias, ''), 'Anonymous User') AS author_alias,
     COUNT(c.id) as comments,
     (SELECT vote_type FROM post_votes pv WHERE pv.post_id = p.id AND pv.user_id = ?) as userVote
-   FROM forum_posts p 
-   LEFT JOIN comments c ON p.id = c.post_id 
-   GROUP BY p.id 
+   FROM forum_posts p
+   LEFT JOIN comments c ON p.id = c.post_id
+   GROUP BY p.id
    ORDER BY p.created_at DESC
   `,
    [userId],
-  ); // Pass the userId to the subquery safely
+  );
 
   res.json(rows);
  } catch (err) {
@@ -57,60 +67,84 @@ exports.getpost = async (req, res) => {
  }
 };
 
-// ================= ADD COMMENT / REPLY =================
 exports.addreply = async (req, res) => {
- const { post_id, parent_id, content } = req.body;
+ const postId = Number.parseInt(req.body.post_id, 10);
+ const parentId = req.body.parent_id ? Number.parseInt(req.body.parent_id, 10) : null;
+ const content = normalizeText(req.body.content);
+ const authorId = Number.parseInt(req.body.userId, 10) || null;
+ const authorAlias = getAuthorAlias(req.body.authorAlias);
 
- await db
-  .promise()
-  .query(
-   "INSERT INTO comments (post_id, parent_id, content) VALUES (?, ?, ?)",
-   [post_id, parent_id || null, content],
+ if (!postId || !content) {
+  return res
+   .status(400)
+   .json({ message: "Post ID and comment content are required." });
+ }
+
+ try {
+  await db.promise().query(
+   `INSERT INTO comments (post_id, parent_id, content, author_id, author_alias)
+    VALUES (?, ?, ?, ?, ?)`,
+   [postId, parentId, content, authorId, authorAlias],
   );
 
- res.json({ message: "Comment added" });
+  res.json({ message: "Comment added" });
+ } catch (err) {
+  console.error("Add Comment Error:", err);
+  res.status(500).json({ message: "Unable to add comment right now." });
+ }
 };
 
-// ================= GET COMMENTS =================
 exports.getreply = async (req, res) => {
- const [rows] = await db
-  .promise()
-  .query("SELECT * FROM comments WHERE post_id = ? ORDER BY created_at ASC", [
-   req.params.postId,
-  ]);
+ try {
+  const [rows] = await db.promise().query(
+   `
+    SELECT
+     *,
+     COALESCE(NULLIF(author_alias, ''), 'Anonymous User') AS author_alias
+    FROM comments
+    WHERE post_id = ?
+    ORDER BY created_at ASC
+   `,
+   [req.params.postId],
+  );
 
- res.json(rows);
+  res.json(rows);
+ } catch (err) {
+  console.error("Get Comments Error:", err);
+  res.status(500).json({ message: "Unable to load comments right now." });
+ }
 };
 
-// ================= VOTE POST =================
 exports.votePost = async (req, res) => {
  try {
-  // We now expect userId and voteType from the frontend
   const { postId, upvotes, downvotes, userId, voteType } = req.body;
 
-  if (!postId || !userId || upvotes === undefined) {
+  if (
+   !postId ||
+   !userId ||
+   upvotes === undefined ||
+   downvotes === undefined ||
+   !["up", "down"].includes(voteType)
+  ) {
    return res.status(400).json({ message: "Missing data" });
   }
 
-  // 1. Try to record the user's vote in the ledger
   try {
    await db
     .promise()
     .query(
      "INSERT INTO post_votes (post_id, user_id, vote_type) VALUES (?, ?, ?)",
-     [postId, userId, voteType],
+     [postId, String(userId), voteType],
     );
   } catch (dbErr) {
-   // If the user already voted, MySQL blocks it and throws this specific error
    if (dbErr.code === "ER_DUP_ENTRY") {
     return res
      .status(403)
      .json({ message: "You have already voted on this post." });
    }
-   throw dbErr; // Pass other errors down to the main catch block
+   throw dbErr;
   }
 
-  // 2. If the ledger entry succeeded, update the total numbers on the post
   await db
    .promise()
    .query("UPDATE forum_posts SET upvotes = ?, downvotes = ? WHERE id = ?", [

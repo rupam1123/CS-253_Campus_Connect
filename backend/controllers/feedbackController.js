@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const normalizeText = (value) => (typeof value === "string" ? value.trim() : "");
 
 const submitFeedback = async (req, res) => {
  const {
@@ -9,8 +10,15 @@ const submitFeedback = async (req, res) => {
   clarity,
   engagement,
   lecturePace,
-  detailedFeedback,
+ detailedFeedback,
  } = req.body;
+ const numericRatings = [
+  contentQuality,
+  teachingDelivery,
+  clarity,
+  engagement,
+  lecturePace,
+ ].map((value) => Number.parseInt(value, 10));
 
  // Basic validation to ensure no missing fields
  if (
@@ -27,6 +35,12 @@ const submitFeedback = async (req, res) => {
    .json({ message: "Please fill out all rating fields." });
  }
 
+ if (numericRatings.some((value) => Number.isNaN(value) || value < 1 || value > 5)) {
+  return res
+   .status(400)
+   .json({ message: "Ratings must stay between 1 and 5." });
+ }
+
  try {
   const query = `
       INSERT INTO course_feedback 
@@ -36,13 +50,9 @@ const submitFeedback = async (req, res) => {
 
   const values = [
    userId,
-   courseName,
-   contentQuality,
-   teachingDelivery,
-   clarity,
-   engagement,
-   lecturePace,
-   detailedFeedback || "", // Fallback to empty string if no text comment is provided
+   courseName.trim(),
+   ...numericRatings,
+   detailedFeedback?.trim() || "",
   ];
 
   await db.promise().execute(query, values);
@@ -64,7 +74,7 @@ const submitFeedback = async (req, res) => {
 // Add this below your submitFeedback function in feedbackController.js
 
 const getCourseDiscussions = async (req, res) => {
- const { courseName } = req.params;
+ const courseName = normalizeText(req.params.courseName);
  const { userId } = req.query; // Extract user ID from the new query param
 
  try {
@@ -72,8 +82,10 @@ const getCourseDiscussions = async (req, res) => {
   const query = `
       SELECT 
         f.feedback_id, f.detailed_feedback AS text, f.upvotes, f.downvotes, f.created_at,
+        COALESCE(NULLIF(u.anonymous_username, ''), CONCAT('anonymous_', f.user_id)) AS anonymous_username,
         v.vote_type AS userVote
       FROM course_feedback f
+      LEFT JOIN users u ON u.user_id = f.user_id
       LEFT JOIN feedback_votes v 
         ON f.feedback_id = v.feedback_id AND v.user_id = ?
       WHERE f.course_name = ? 
@@ -89,6 +101,7 @@ const getCourseDiscussions = async (req, res) => {
    course: courseName,
    text: row.text,
    date: row.created_at,
+   alias: row.anonymous_username,
    upvotes: row.upvotes || 0,
    downvotes: row.downvotes || 0,
    userVote: row.userVote || null, // Will be 'up', 'down', or null
@@ -104,7 +117,12 @@ const getCourseDiscussions = async (req, res) => {
 const voteFeedback = async (req, res) => {
  const { feedbackId, userId, voteType } = req.body;
 
- if (!feedbackId || !userId || !voteType) {
+ if (
+  !feedbackId ||
+  !userId ||
+  !voteType ||
+  !["up", "down"].includes(voteType)
+ ) {
   return res.status(400).json({ message: "Missing data" });
  }
 
@@ -114,7 +132,7 @@ const voteFeedback = async (req, res) => {
    .promise()
    .query(
     "INSERT INTO feedback_votes (feedback_id, user_id, vote_type) VALUES (?, ?, ?)",
-    [feedbackId, userId, voteType],
+    [feedbackId, String(userId), voteType],
    );
 
   // 2. If the insert succeeds (no duplicate error), safely increment the main table

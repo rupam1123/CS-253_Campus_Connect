@@ -74,12 +74,16 @@ exports.sendOTP = (req, res) => {
  });
 };
 exports.verifyOTP = async (req, res) => {
- const { name, email, password, role, otp } = req.body;
+ const { name, email, password, role, otp, anonymousUsername } = req.body;
+ const normalizedAnonymousUsername =
+  typeof anonymousUsername === "string"
+   ? anonymousUsername.trim().replace(/\s+/g, " ")
+   : "";
 
  // ======================
  // VALIDATION
  // ======================
- if (!name || !email || !password || !role || !otp) {
+ if (!name || !email || !password || !role || !otp || !normalizedAnonymousUsername) {
   return res.status(400).json({ message: "All fields are required" });
  }
 
@@ -125,11 +129,17 @@ exports.verifyOTP = async (req, res) => {
    // INSERT USER
    // ======================
    const insertUserQuery =
-    "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)";
+    "INSERT INTO users (name, anonymous_username, email, password, role) VALUES (?, ?, ?, ?, ?)";
 
    db.query(
     insertUserQuery,
-    [name, email, hashedPassword, role.toLowerCase()],
+    [
+     name.trim(),
+     normalizedAnonymousUsername,
+     email.trim(),
+     hashedPassword,
+     role.toLowerCase(),
+    ],
     (err, userResult) => {
      if (err) {
       console.error(err);

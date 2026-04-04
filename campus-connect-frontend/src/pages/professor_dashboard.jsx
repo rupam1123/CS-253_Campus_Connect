@@ -1,276 +1,7 @@
-// import { useState } from "react";
-// import DashboardLayout from "../layouts/dashboard_layout";
-// import { Bar } from "react-chartjs-2";
-// import {
-//  Chart as ChartJS,
-//  CategoryScale,
-//  LinearScale,
-//  BarElement,
-//  Title,
-//  Tooltip,
-//  Legend,
-// } from "chart.js";
-
-// ChartJS.register(
-//  CategoryScale,
-//  LinearScale,
-//  BarElement,
-//  Title,
-//  Tooltip,
-//  Legend,
-// );
-
-// function ProfessorDashboard() {
-//  const [selectedCourse, setSelectedCourse] = useState("");
-
-//  // Mock Data for Comments
-//  const [comments, setComments] = useState([
-//   {
-//    id: 1,
-//    course: "Operating Systems",
-//    text:
-//     "The explanation of Semaphore logic was a bit too fast. Could we get more examples?",
-//    upvotes: 12,
-//    downvotes: 2,
-//    replies: [],
-//   },
-//   {
-//    id: 2,
-//    course: "Operating Systems",
-//    text:
-//     "Loving the hands-on lab sessions! Very helpful for understanding kernel threads.",
-//    upvotes: 24,
-//    downvotes: 0,
-//    replies: ["Glad you're enjoying them! We will add a Pintos lab next week."],
-//   },
-//   {
-//    id: 3,
-//    course: "Data Structures",
-//    text:
-//     "The assignment on Red-Black trees was extremely difficult compared to the lecture content.",
-//    upvotes: 18,
-//    downvotes: 1,
-//    replies: [],
-//   },
-//   {
-//    id: 4,
-//    course: "Data Structures",
-//    text: "Can we have a doubt-clearing session before the mid-sem?",
-//    upvotes: 30,
-//    downvotes: 0,
-//    replies: [],
-//   },
-//   {
-//    id: 5,
-//    course: "Computer Networks",
-//    text: "The slide deck for TCP/IP is missing the diagrams shown in class.",
-//    upvotes: 5,
-//    downvotes: 8,
-//    replies: [],
-//   },
-//   {
-//    id: 6,
-//    course: "Operating Systems",
-//    text: "Is the final exam going to be open-book?",
-//    upvotes: 45,
-//    downvotes: 3,
-//    replies: [],
-//   },
-//   {
-//    id: 7,
-//    course: "Computer Networks",
-//    text:
-//     "Great pace! The packet sniffing demo was the highlight of the semester.",
-//    upvotes: 15,
-//    downvotes: 1,
-//    replies: [],
-//   },
-//   {
-//    id: 8,
-//    course: "Data Structures",
-//    text:
-//     "Please use a darker marker on the whiteboard, it's hard to see from the back.",
-//    upvotes: 9,
-//    downvotes: 0,
-//    replies: [],
-//   },
-//   {
-//    id: 9,
-//    course: "Operating Systems",
-//    text: "I feel like the grading on the last quiz was a bit too harsh.",
-//    upvotes: 3,
-//    downvotes: 15,
-//    replies: [],
-//   },
-//   {
-//    id: 10,
-//    course: "Computer Networks",
-//    text:
-//     "The Wireshark lab instructions were a bit outdated for the latest version.",
-//    upvotes: 7,
-//    downvotes: 2,
-//    replies: [],
-//   },
-//  ]);
-
-//  const [replyText, setReplyText] = useState({});
-
-//  const handleReply = (id) => {
-//   if (!replyText[id]) return;
-//   setComments(
-//    comments.map((c) =>
-//     c.id === id ? { ...c, replies: [...c.replies, replyText[id]] } : c,
-//    ),
-//   );
-//   setReplyText({ ...replyText, [id]: "" });
-//  };
-
-//  const filteredComments = comments.filter((c) => c.course === selectedCourse);
-
-//  // ... (Chart data and options from previous response)
-//  const courseData = {
-//   "Operating Systems": [4.2, 3.8, 4.5, 3.9, 4.1],
-//   "Data Structures": [4.5, 4.2, 4.4, 4.0, 4.3],
-//   "Computer Networks": [3.9, 3.7, 4.1, 3.8, 4.0],
-//  };
-//  const labels = [
-//   "Content Quality",
-//   "Teaching Delivery",
-//   "Clarity",
-//   "Engagement",
-//   "Lecture Pace",
-//  ];
-//  const currentData = courseData[selectedCourse] || [];
-//  const data = {
-//   labels,
-//   datasets: [
-//    {
-//     label: "Rating",
-//     data: currentData,
-//     backgroundColor: "#4f46e5",
-//     borderRadius: 8,
-//    },
-//   ],
-//  };
-
-//  return (
-//   <DashboardLayout>
-//    <div className="p-6 bg-slate-50 min-h-screen">
-//     <header className="mb-8">
-//      <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-//       Professor Analytics
-//      </h2>
-//      <p className="text-slate-500">
-//       Real-time student feedback and performance metrics.
-//      </p>
-//     </header>
-
-//     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-//      {/* LEFT COLUMN: SELECTION & CHART */}
-//      <div className="lg:col-span-2 space-y-6">
-//       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-//        <select
-//         value={selectedCourse}
-//         onChange={(e) => setSelectedCourse(e.target.value)}
-//         className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-bold text-slate-700"
-//        >
-//         <option value="">Select a Course to View Analytics</option>
-//         <option value="Operating Systems">Operating Systems</option>
-//         <option value="Data Structures">Data Structures</option>
-//         <option value="Computer Networks">Computer Networks</option>
-//        </select>
-//       </div>
-
-//       {selectedCourse && (
-//        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-96">
-//         <Bar
-//          data={data}
-//          options={{ responsive: true, maintainAspectRatio: false }}
-//         />
-//        </div>
-//       )}
-//      </div>
-
-//      {/* RIGHT COLUMN: RECENT COMMENTS */}
-//      <div className="lg:col-span-1">
-//       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
-//        <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-//         <h3 className="font-bold text-slate-800 flex items-center gap-2">
-//          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-//          Anonymous Student Feed
-//         </h3>
-//        </div>
-
-//        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-//         {selectedCourse ? (
-//          filteredComments.map((comment) => (
-//           <div
-//            key={comment.id}
-//            className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3"
-//           >
-//            <p className="text-sm text-slate-600 leading-relaxed italic">
-//             "{comment.text}"
-//            </p>
-
-//            <div className="flex items-center justify-between">
-//             <div className="flex gap-3">
-//              <span className="flex items-center gap-1 text-[11px] font-bold text-green-600">
-//               ▲ {comment.upvotes}
-//              </span>
-//              <span className="flex items-center gap-1 text-[11px] font-bold text-red-400">
-//               ▼ {comment.downvotes}
-//              </span>
-//             </div>
-//            </div>
-
-//            {/* Replies */}
-//            {comment.replies.map((r, i) => (
-//             <div
-//              key={i}
-//              className="ml-4 p-2 bg-indigo-50 border-l-2 border-indigo-400 text-xs text-indigo-700 rounded-r-md"
-//             >
-//              <span className="font-bold">You:</span> {r}
-//             </div>
-//            ))}
-
-//            {/* Reply Input */}
-//            <div className="flex gap-2 mt-2">
-//             <input
-//              type="text"
-//              placeholder="Reply to student..."
-//              value={replyText[comment.id] || ""}
-//              onChange={(e) =>
-//               setReplyText({ ...replyText, [comment.id]: e.target.value })
-//              }
-//              className="flex-1 text-xs p-2 rounded-lg border border-slate-200 outline-none focus:border-indigo-400"
-//             />
-//             <button
-//              onClick={() => handleReply(comment.id)}
-//              className="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-lg font-bold"
-//             >
-//              Send
-//             </button>
-//            </div>
-//           </div>
-//          ))
-//         ) : (
-//          <p className="text-center text-slate-400 mt-10 text-sm">
-//           Select a course to see comments.
-//          </p>
-//         )}
-//        </div>
-//       </div>
-//      </div>
-//     </div>
-//    </div>
-//   </DashboardLayout>
-//  );
-// }
-
-// export default ProfessorDashboard;
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import useSWR from "swr";
 import DashboardLayout from "../layouts/dashboard_layout";
+import { getErrorMessage } from "../lib/api.js";
 import { Bar } from "react-chartjs-2";
 import {
  Chart as ChartJS,
@@ -281,6 +12,7 @@ import {
  Tooltip,
  Legend,
 } from "chart.js";
+import { BarChart3, MessageSquareText } from "lucide-react";
 
 ChartJS.register(
  CategoryScale,
@@ -291,213 +23,306 @@ ChartJS.register(
  Legend,
 );
 
+const CHART_LABELS = [
+ "Content Quality",
+ "Teaching Delivery",
+ "Clarity",
+ "Engagement",
+ "Lecture Pace",
+];
+
 function ProfessorDashboard() {
- const [selectedCourse, setSelectedCourse] = useState("");
+ const [selectedCourseId, setSelectedCourseId] = useState("");
 
- // States for live database data
- const [comments, setComments] = useState([]);
- const [chartDataArray, setChartDataArray] = useState([0, 0, 0, 0, 0]);
- const [replyText, setReplyText] = useState({});
+ const {
+  data: managedCoursesData,
+  error: managedCoursesError,
+  isLoading: managedCoursesLoading,
+ } = useSWR("/api/courses/professor/managed");
 
- // NEW: Fetch live data whenever a course is selected
- useEffect(() => {
-  if (selectedCourse) {
-   // 1. Fetch Chart Averages
-   fetch(
-    `http://localhost:5001/api/professor/analytics/${encodeURIComponent(selectedCourse)}`,
-   )
-    .then((res) => res.json())
-    .then((data) => {
-     if (data.chartData) setChartDataArray(data.chartData);
-    })
-    .catch((err) => console.error("Failed to fetch chart data:", err));
+ const managedCourses = managedCoursesData?.courses || [];
+ const hasSelectedCourse = managedCourses.some(
+  (course) => String(course.id) === selectedCourseId,
+ );
+ const activeCourseId = hasSelectedCourse
+  ? selectedCourseId
+  : String(managedCourses[0]?.id || "");
+ const selectedCourse =
+  managedCourses.find((course) => String(course.id) === activeCourseId) || null;
+ const selectedCourseName = selectedCourse?.name || "";
 
-   // 2. Fetch Student Comments
-   fetch(
-    `http://localhost:5001/api/professor/comments/${encodeURIComponent(selectedCourse)}`,
-   )
-    .then((res) => res.json())
-    .then((data) => {
-     if (data.comments) setComments(data.comments);
-    })
-    .catch((err) => console.error("Failed to fetch comments:", err));
-  } else {
-   // Reset if no course is selected
-   setChartDataArray([0, 0, 0, 0, 0]);
-   setComments([]);
-  }
- }, [selectedCourse]);
+ const {
+  data: analyticsData,
+  error: analyticsError,
+  isLoading: analyticsLoading,
+ } = useSWR(
+  selectedCourseName
+   ? `/api/professor/analytics/${encodeURIComponent(selectedCourseName)}`
+   : null,
+ );
+ const {
+  data: commentsData,
+  error: commentsError,
+  isLoading: commentsLoading,
+ } = useSWR(
+  selectedCourseName
+   ? `/api/professor/comments/${encodeURIComponent(selectedCourseName)}`
+   : null,
+ );
 
- // Handle local UI replies (Note: not saved to DB yet)
- const handleReply = (id) => {
-  if (!replyText[id]) return;
-  setComments(
-   comments.map((c) =>
-    c.id === id ? { ...c, replies: [...c.replies, replyText[id]] } : c,
-   ),
-  );
-  setReplyText({ ...replyText, [id]: "" });
- };
+ const chartDataArray = analyticsData?.chartData || [0, 0, 0, 0, 0];
+ const comments = commentsData?.comments || [];
+ const averageScore =
+  chartDataArray.reduce((total, current) => total + current, 0) /
+  chartDataArray.length;
 
- // Chart configuration
- const labels = [
-  "Content Quality",
-  "Teaching Delivery",
-  "Clarity",
-  "Engagement",
-  "Lecture Pace",
- ];
-
- const data = {
-  labels,
+ const chartData = {
+  labels: CHART_LABELS,
   datasets: [
    {
-    label: "Rating",
+    label: "Average Rating",
     data: chartDataArray,
-    backgroundColor: "#4f46e5",
-    borderRadius: 8,
+    backgroundColor: [
+     "#38bdf8",
+     "#14b8a6",
+     "#f59e0b",
+     "#8b5cf6",
+     "#ef4444",
+    ],
+    borderRadius: 14,
+    maxBarThickness: 48,
    },
   ],
  };
 
  return (
   <DashboardLayout>
-   <div className="p-6 bg-slate-50 min-h-screen">
-    <header className="mb-8">
-     <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-      Course Analytics
-     </h2>
-     <p className="text-slate-500">
-      Real-time student feedback and performance metrics.
+   <div className="space-y-8">
+    <div className="glass-panel rounded-[28px] p-6 sm:p-8">
+     <p className="text-sm font-bold uppercase tracking-[0.24em] text-sky-600">
+      Professor Analytics
      </p>
-    </header>
+     <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">
+      Monitor course sentiment with less guesswork
+     </h2>
+     <p className="mt-3 max-w-2xl text-base leading-7 text-slate-500">
+      Select one of your managed courses to review aggregate ratings and the
+      most recent anonymous comments. This view stays read-only until reply
+      persistence is supported end to end.
+     </p>
+    </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-     {/* LEFT COLUMN: SELECTION & CHART */}
-     <div className="lg:col-span-2 space-y-6">
-      <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-       <select
-        value={selectedCourse}
-        onChange={(e) => setSelectedCourse(e.target.value)}
-        className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-bold text-slate-700"
-       >
-        <option value="">Select a Course to View Analytics</option>
-        {/* Eventually, you can fetch these course options from the DB too! */}
-        <option value="Operating Systems">Operating Systems</option>
-        <option value="Data Structures">Data Structures</option>
-        <option value="Computer Networks">Computer Networks</option>
-        <option value="DBMS">DBMS</option>
-        <option value="Compiler Design">Compiler Design</option>
-        <option value="Cyber Security">Cyber Security</option>
-        <option value="AI">AI</option>
-        <option value="Cloud Computing">Cloud Computing</option>
-       </select>
-      </div>
-
-      {selectedCourse && (
-       <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-96">
-        <Bar
-         data={data}
-         options={{
-          responsive: true,
-          maintainAspectRatio: false,
-          // Add the scales configuration to fix the y-axis
-          scales: {
-           y: {
-            beginAtZero: true, // This ensures it starts at 0
-            min: 0, // Forces the minimum value to be 0
-            max: 5, // Forces the maximum value to be 5
-            ticks: {
-             stepSize: 1, // optional: sets grid lines and numbers at 1, 2, 3, etc.
-            },
-           },
-          },
-         }}
-        />
-       </div>
+    {managedCoursesError && (
+     <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+      {getErrorMessage(
+       managedCoursesError,
+       "Unable to load your managed courses right now.",
       )}
      </div>
+    )}
 
-     {/* RIGHT COLUMN: RECENT COMMENTS */}
-     <div className="lg:col-span-1">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
-       <div className="p-5 border-b border-slate-100 bg-slate-50/50">
-        <h3 className="font-bold text-slate-800 flex items-center gap-2">
-         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-         Anonymous Student Feed
-        </h3>
-       </div>
+    <div className="glass-panel rounded-[28px] p-6">
+     <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+      Select Course
+     </p>
+     <p className="mt-2 text-sm leading-6 text-slate-500">
+      Quick course pills keep the analytics panel cleaner than a dropdown.
+     </p>
 
-       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {selectedCourse ? (
-         comments.length > 0 ? (
-          comments.map((comment) => (
-           <div
-            key={comment.id}
-            className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3"
-           >
-            <p className="text-sm text-slate-600 leading-relaxed italic">
-             "{comment.text}"
-            </p>
+     {managedCourses.length > 0 ? (
+      <div className="mt-4">
+       <CoursePillSelector
+        activeCourseId={activeCourseId}
+        courses={managedCourses}
+        onSelect={(courseId) => setSelectedCourseId(String(courseId))}
+       />
+      </div>
+     ) : (
+      <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-500">
+       {managedCoursesLoading
+        ? "Loading your managed courses..."
+        : "Create a course in Manage Course first"}
+      </div>
+     )}
+    </div>
 
-            <div className="flex items-center justify-between">
-             <div className="flex gap-3">
-              <span className="flex items-center gap-1 text-[11px] font-bold text-green-600">
-               ▲ {comment.upvotes}
-              </span>
-              <span className="flex items-center gap-1 text-[11px] font-bold text-red-400">
-               ▼ {comment.downvotes}
-              </span>
-             </div>
-            </div>
-
-            {/* Replies */}
-            {comment.replies &&
-             comment.replies.map((r, i) => (
-              <div
-               key={i}
-               className="ml-4 p-2 bg-indigo-50 border-l-2 border-indigo-400 text-xs text-indigo-700 rounded-r-md"
-              >
-               <span className="font-bold">You:</span> {r}
-              </div>
-             ))}
-
-            {/* Reply Input */}
-            <div className="flex gap-2 mt-2">
-             <input
-              type="text"
-              placeholder="Reply to student..."
-              value={replyText[comment.id] || ""}
-              onChange={(e) =>
-               setReplyText({ ...replyText, [comment.id]: e.target.value })
-              }
-              className="flex-1 text-xs p-2 rounded-lg border border-slate-200 outline-none focus:border-indigo-400"
-             />
-             <button
-              onClick={() => handleReply(comment.id)}
-              className="bg-indigo-600 text-white text-[10px] px-3 py-1 rounded-lg font-bold"
-             >
-              Send
-             </button>
-            </div>
-           </div>
-          ))
-         ) : (
-          <p className="text-center text-slate-400 mt-10 text-sm font-medium">
-           No comments submitted yet for this course.
-          </p>
-         )
-        ) : (
-         <p className="text-center text-slate-400 mt-10 text-sm">
-          Select a course to see comments.
-         </p>
+    {selectedCourseName ? (
+     <>
+      {(analyticsError || commentsError) && (
+       <div className="rounded-3xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-semibold text-rose-700">
+        {getErrorMessage(
+         analyticsError || commentsError,
+         "Unable to load professor analytics right now.",
         )}
        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+       <div className="glass-panel rounded-[28px] p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+         Course
+        </p>
+        <h3 className="mt-3 text-2xl font-black text-slate-900">
+         {selectedCourse.code ? `${selectedCourse.code} - ${selectedCourseName}` : selectedCourseName}
+        </h3>
+       </div>
+       <div className="glass-panel rounded-[28px] p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+         Average Score
+        </p>
+        <h3 className="mt-3 text-2xl font-black text-slate-900">
+         {analyticsLoading ? "..." : averageScore.toFixed(1)} / 5
+        </h3>
+       </div>
+       <div className="glass-panel rounded-[28px] p-6">
+        <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+         Discussion Entries
+        </p>
+        <h3 className="mt-3 text-2xl font-black text-slate-900">
+         {commentsLoading ? "..." : comments.length}
+        </h3>
+       </div>
       </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+       <div className="glass-panel rounded-[32px] p-6 lg:col-span-2">
+        <div className="flex items-center gap-3">
+         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
+          <BarChart3 size={20} />
+         </div>
+         <div>
+          <h3 className="text-xl font-black text-slate-900">
+           Rating Breakdown
+          </h3>
+          <p className="text-sm text-slate-500">
+           Average score per dimension for {selectedCourseName}.
+          </p>
+         </div>
+        </div>
+
+        <div className="mt-6 h-[380px]">
+         <Bar
+          data={chartData}
+          options={{
+           responsive: true,
+           maintainAspectRatio: false,
+           plugins: {
+            legend: { display: false },
+           },
+           scales: {
+            y: {
+             beginAtZero: true,
+             min: 0,
+             max: 5,
+             ticks: { stepSize: 1 },
+             grid: {
+              color: "rgba(148, 163, 184, 0.15)",
+             },
+            },
+            x: {
+             grid: { display: false },
+            },
+           },
+          }}
+         />
+        </div>
+       </div>
+
+       <div className="glass-panel flex rounded-[32px] p-6">
+        <div className="flex w-full flex-col">
+         <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+           <MessageSquareText size={20} />
+          </div>
+          <div>
+           <h3 className="text-xl font-black text-slate-900">
+            Anonymous Comments
+           </h3>
+           <p className="text-sm text-slate-500">
+            Most recent feedback threads for this course.
+           </p>
+          </div>
+         </div>
+
+         <div className="scrollbar-none mt-6 flex-1 space-y-4 overflow-y-auto pr-1">
+          {commentsLoading ? (
+           <div className="rounded-2xl border border-slate-200 bg-white/80 px-5 py-8 text-center text-sm font-medium text-slate-500">
+            Loading discussion entries...
+           </div>
+          ) : comments.length > 0 ? (
+           comments.map((comment) => (
+            <div
+             key={comment.id}
+             className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm"
+            >
+             <p className="text-sm leading-7 text-slate-700">{comment.text}</p>
+             <div className="mt-4 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+              <span>Upvotes {comment.upvotes || 0}</span>
+              <span>Downvotes {comment.downvotes || 0}</span>
+             </div>
+            </div>
+           ))
+          ) : (
+           <div className="rounded-2xl border border-dashed border-slate-300 bg-white/80 px-5 py-10 text-center text-sm font-medium text-slate-500">
+            No written comments have been submitted for this course yet.
+           </div>
+          )}
+         </div>
+        </div>
+       </div>
+      </div>
+     </>
+    ) : (
+     <div className="glass-panel rounded-[32px] px-6 py-16 text-center">
+      <BarChart3 size={48} className="mx-auto text-slate-300" />
+      <h3 className="mt-5 text-xl font-black text-slate-900">
+       Select a managed course to unlock analytics
+      </h3>
+      <p className="mt-2 text-sm text-slate-500">
+       Once you create or choose a course, ratings and comment trends will
+       appear here.
+      </p>
      </div>
-    </div>
+    )}
    </div>
   </DashboardLayout>
+ );
+}
+
+function CoursePillSelector({ activeCourseId, courses, onSelect }) {
+ return (
+  <div className="scrollbar-none -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+   {courses.map((course) => {
+    const courseId = String(course.id);
+    const isActive = courseId === activeCourseId;
+
+    return (
+     <button
+      key={course.id}
+      type="button"
+      onClick={() => onSelect(courseId)}
+      className={`group min-w-fit rounded-full border px-4 py-2 text-left transition ${
+       isActive
+        ? "border-sky-300/70 bg-[linear-gradient(135deg,rgba(56,189,248,0.92),rgba(45,212,191,0.85))] text-slate-950 shadow-[0_18px_34px_rgba(14,165,233,0.22)]"
+        : "border-white/80 bg-white/76 text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.05)] hover:border-sky-200 hover:bg-white"
+      }`}
+     >
+      <div className="flex items-center gap-2">
+       <span className="text-[11px] font-black uppercase tracking-[0.16em]">
+        {course.code || "Course"}
+       </span>
+       <span
+        className={`max-w-[190px] truncate text-xs font-semibold ${
+         isActive ? "text-slate-900/85" : "text-slate-500"
+        }`}
+       >
+        {course.name}
+       </span>
+      </div>
+     </button>
+    );
+   })}
+  </div>
  );
 }
 
